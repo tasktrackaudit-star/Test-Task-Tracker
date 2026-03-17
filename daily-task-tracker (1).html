@@ -1,0 +1,3788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Task Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:#0f2044;--navy2:#1a3260;--blue:#2557a7;--accent:#f0a500;--accent2:#ffc845;
+    --red:#d93025;--green:#1e7e34;--green-soft:#d4edda;--yellow-soft:#fff3cd;
+    --red-soft:#f8d7da;--grey-soft:#e9ecef;--bg:#f4f6fb;--card:#ffffff;
+    --text:#1a1a2e;--muted:#6b7280;--border:#dde3ef;--sidebar-w:240px;
+    --radius:12px;--shadow:0 2px 16px rgba(15,32,68,.10);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:15px}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+  /* SUPABASE CONFIG SCREEN */
+  #sb-config-screen{display:none;align-items:center;justify-content:center;min-height:100vh;
+    background:linear-gradient(135deg,#0a1628 0%,#0f2044 50%,#1a3260 100%);padding:1.5rem}
+  .sb-config-box{background:#fff;border-radius:20px;padding:2.5rem 2.2rem;width:100%;max-width:480px;
+    box-shadow:0 24px 60px rgba(0,0,0,.45);animation:fadeUp .5s ease}
+  .sb-config-box h2{font-family:'Inter',sans-serif;font-size:1.4rem;color:var(--navy);margin-bottom:.3rem}
+  .sb-config-box p{font-size:.85rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.6}
+  .sb-step{background:var(--bg);border-radius:10px;padding:1rem 1.2rem;margin-bottom:1rem;border-left:3px solid var(--accent)}
+  .sb-step-num{font-size:.72rem;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.2rem}
+  .sb-step p{margin:0;font-size:.82rem;color:var(--muted)}
+  .sb-step code{background:rgba(37,87,167,.1);color:var(--blue);padding:.1rem .35rem;border-radius:4px;font-size:.8rem}
+  .sb-config-msg{font-size:.82rem;margin-top:.6rem;min-height:1.2em;text-align:center}
+  .sb-config-msg.error{color:var(--red)}.sb-config-msg.success{color:var(--green)}
+  .sb-reset-btn{display:none;position:fixed;bottom:1rem;right:1rem;padding:.4rem .9rem;background:rgba(0,0,0,.5);
+    color:#fff;border:none;border-radius:8px;font-size:.75rem;cursor:pointer;z-index:9999;font-family:inherit}
+  .sb-reset-btn:hover{background:rgba(0,0,0,.7)}
+
+  /* LOADING OVERLAY */
+  #loading-overlay{display:none;position:fixed;inset:0;background:rgba(15,32,68,.92);z-index:9000;
+    align-items:center;justify-content:center;flex-direction:column;gap:1rem}
+  #loading-overlay.show{display:flex}
+  .loading-spinner{width:44px;height:44px;border:4px solid rgba(255,255,255,.2);
+    border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+  .loading-msg{color:#fff;font-size:.92rem;font-weight:600;font-family:'Inter',sans-serif}
+  .loading-sub{color:rgba(255,255,255,.55);font-size:.78rem;margin-top:-.5rem}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* AUTH */
+  #auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 50%,#0d3b7a 100%);padding:1.5rem}
+  .auth-box{background:var(--card);border-radius:20px;padding:2.5rem 2.2rem;width:100%;max-width:420px;
+    box-shadow:0 24px 60px rgba(0,0,0,.35);animation:fadeUp .5s ease}
+  .auth-logo{display:flex;align-items:center;gap:.7rem;margin-bottom:1.8rem}
+  .auth-logo-icon{width:44px;height:44px;background:var(--navy);border-radius:10px;display:grid;place-items:center}
+  .auth-logo-icon svg{width:24px;height:24px;fill:var(--accent)}
+  .auth-logo h1{font-family:'Inter',sans-serif;font-size:1.2rem;color:var(--navy);line-height:1.1;font-weight:700}
+  .auth-logo span{font-size:.75rem;color:var(--muted);font-weight:400;display:block}
+  .auth-tabs{display:flex;gap:.5rem;margin-bottom:1.5rem;background:var(--bg);border-radius:8px;padding:4px}
+  .auth-tab{flex:1;padding:.5rem;text-align:center;border-radius:6px;cursor:pointer;font-weight:600;
+    font-size:.85rem;color:var(--muted);transition:all .2s;border:none;background:none}
+  .auth-tab.active{background:var(--navy);color:#fff}
+  .auth-panel{display:none}.auth-panel.active{display:block}
+  .form-group{margin-bottom:1rem}
+  .form-group label{display:block;font-size:.8rem;font-weight:600;color:var(--navy);margin-bottom:.35rem;
+    letter-spacing:.03em;text-transform:uppercase}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:.65rem .9rem;
+    border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.92rem;color:var(--text);
+    background:var(--bg);transition:border-color .2s,box-shadow .2s;outline:none}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+    border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,87,167,.12)}
+  .btn-primary{width:100%;padding:.75rem;background:var(--navy);color:#fff;border:none;border-radius:8px;
+    font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:background .2s,transform .1s;letter-spacing:.02em}
+  .btn-primary:hover{background:var(--blue)}.btn-primary:active{transform:scale(.98)}
+  .auth-msg{font-size:.82rem;color:var(--red);margin-top:.6rem;min-height:1.2em;text-align:center}
+  .auth-note{font-size:.78rem;color:var(--muted);text-align:center;margin-top:1rem;line-height:1.5}
+
+  /* APP */
+  #app{display:none;min-height:100vh}
+  .sidebar{position:fixed;top:0;left:0;height:100vh;width:var(--sidebar-w);background:var(--navy);
+    z-index:200;display:flex;flex-direction:column;transition:transform .3s ease}
+  .sidebar-brand{padding:1.4rem 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,.08);
+    display:flex;align-items:center;gap:.7rem}
+  .sidebar-brand-icon{width:36px;height:36px;background:var(--accent);border-radius:8px;display:grid;place-items:center;flex-shrink:0}
+  .sidebar-brand-icon svg{width:20px;height:20px;fill:var(--navy)}
+  .sidebar-brand-text h2{font-family:'Inter',sans-serif;color:#fff;font-size:.92rem;line-height:1.1;font-weight:700}
+  .sidebar-brand-text span{font-size:.7rem;color:rgba(255,255,255,.45)}
+  .sidebar-user{padding:.9rem 1.2rem;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:.6rem}
+  .sidebar-avatar{width:32px;height:32px;background:var(--accent);border-radius:50%;display:grid;place-items:center;
+    font-weight:700;font-size:.85rem;color:var(--navy);flex-shrink:0}
+  .sidebar-user-name{color:#fff;font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sidebar-user-role{color:rgba(255,255,255,.45);font-size:.7rem}
+  nav{flex:1;padding:.8rem 0;overflow-y:auto}
+  .nav-section{padding:.4rem 1.2rem .2rem;font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);
+    letter-spacing:.1em;text-transform:uppercase}
+  .nav-item{display:flex;align-items:center;gap:.7rem;padding:.6rem 1.2rem;color:rgba(255,255,255,.65);
+    cursor:pointer;transition:all .15s;font-size:.87rem;font-weight:500;border:none;background:none;
+    width:100%;text-align:left;border-left:3px solid transparent}
+  .nav-item svg{width:18px;height:18px;flex-shrink:0;opacity:.7}
+  .nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+  .nav-item.active{background:rgba(255,255,255,.12);color:var(--accent);border-left-color:var(--accent);font-weight:600}
+  .nav-item.active svg{opacity:1}
+  .sidebar-footer{padding:1rem 1.2rem;border-top:1px solid rgba(255,255,255,.08)}
+  .btn-logout{display:flex;align-items:center;gap:.5rem;color:rgba(255,255,255,.5);cursor:pointer;
+    font-size:.82rem;background:none;border:none;font-family:inherit;padding:.4rem 0;transition:color .2s}
+  .btn-logout:hover{color:#ff6b6b}
+  .btn-logout svg{width:16px;height:16px}
+
+  .main{margin-left:var(--sidebar-w);padding:1.5rem 1.8rem;min-height:100vh}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;gap:1rem}
+  .topbar-left{display:flex;align-items:center;gap:.8rem}
+  .hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px}
+  .hamburger span{display:block;width:22px;height:2px;background:var(--navy);margin:5px 0;border-radius:2px;transition:all .3s}
+  .page-title{font-family:'Inter',sans-serif;font-size:1.4rem;color:var(--navy);font-weight:700;letter-spacing:-.01em}
+  .chip{background:var(--navy);color:var(--accent);padding:.3rem .8rem;border-radius:20px;font-size:.75rem;font-weight:700;white-space:nowrap}
+  .page{display:none;animation:fadeUp .3s ease}.page.active{display:block}
+
+  /* CARDS */
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.4rem;margin-bottom:1.2rem}
+  .card-title{font-family:'Inter',sans-serif;font-size:.95rem;color:var(--navy);font-weight:600;letter-spacing:.01em;margin-bottom:1rem;
+    display:flex;align-items:center;gap:.5rem}
+
+  /* FORM */
+  .form-header{background:linear-gradient(90deg,var(--navy) 0%,var(--navy2) 100%);border-radius:var(--radius) var(--radius) 0 0;
+    padding:1.2rem 1.4rem;margin:-1.4rem -1.4rem 1.4rem}
+  .form-header h2{font-family:'Inter',sans-serif;color:#fff;font-size:1.1rem;font-weight:700}
+  .form-header p{color:rgba(255,255,255,.6);font-size:.8rem;margin-top:.2rem}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .form-grid .full{grid-column:1/-1}
+  .form-group select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .8rem center;padding-right:2rem}
+  .form-group select:disabled{opacity:.5;cursor:not-allowed;background-color:#f0f0f0}
+  .form-actions{display:flex;gap:.8rem;justify-content:flex-end;margin-top:1.2rem}
+  .btn-secondary{padding:.6rem 1.3rem;background:transparent;border:1.5px solid var(--border);border-radius:8px;
+    font-family:inherit;font-size:.88rem;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s}
+  .btn-secondary:hover{border-color:var(--navy);color:var(--navy)}
+  .btn-save{padding:.6rem 1.6rem;background:var(--accent);border:none;border-radius:8px;font-family:inherit;
+    font-size:.88rem;font-weight:700;color:var(--navy);cursor:pointer;transition:all .2s}
+  .btn-save:hover{background:var(--accent2)}.btn-save:active{transform:scale(.97)}
+  .required-note{font-size:.75rem;color:var(--muted);margin-top:.8rem}
+  #file-input{display:none}
+  .cascade-hint{font-size:.72rem;color:var(--muted);margin-top:.2rem;font-style:italic}
+  /* File attachment panel */
+  .attach-panel{border:1.5px solid var(--border);border-radius:8px;background:var(--bg);overflow:hidden}
+  .attach-panel-top{padding:.6rem .85rem;display:flex;align-items:center;gap:.6rem;background:#fff;border-bottom:1px solid var(--border)}
+  .btn-request{padding:.32rem .8rem;background:var(--navy);color:#fff;border:none;border-radius:6px;
+    font-family:inherit;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s;flex-shrink:0}
+  .btn-request:hover{background:var(--blue)}
+  .btn-request:disabled{opacity:.5;cursor:not-allowed}
+  .attach-files-list{padding:.5rem .85rem;display:flex;flex-direction:column;gap:.4rem;min-height:36px}
+  .attach-file-item{display:flex;align-items:center;gap:.5rem;padding:.35rem .55rem;background:#fff;
+    border:1px solid var(--border);border-radius:6px;font-size:.78rem;animation:fadeUp .2s ease}
+  .attach-file-icon{width:22px;height:22px;background:rgba(37,87,167,.1);border-radius:4px;display:grid;place-items:center;flex-shrink:0}
+  .attach-file-icon svg{width:13px;height:13px;stroke:var(--blue)}
+  .attach-file-name{flex:1;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .attach-file-link{color:var(--blue);font-size:.72rem;font-weight:600;text-decoration:none;white-space:nowrap;flex-shrink:0}
+  .attach-file-link:hover{text-decoration:underline}
+  .attach-file-del{background:none;border:none;cursor:pointer;color:var(--muted);padding:0 2px;line-height:1;flex-shrink:0;font-size:.85rem;transition:color .15s}
+  .attach-file-del:hover{color:var(--red)}
+  .attach-empty{color:var(--muted);font-size:.75rem;font-style:italic;padding:.2rem 0}
+  .attach-request-status{font-size:.73rem;padding:.3rem .85rem .5rem;min-height:1.2em}
+  .attach-request-status.pending{color:var(--accent);font-weight:600}
+  .attach-request-status.granted{color:var(--green);font-weight:600}
+  .attach-request-status.denied{color:var(--red)}
+  .drive-link-chip{display:inline-flex;align-items:center;gap:.35rem;background:rgba(37,87,167,.1);
+    color:var(--blue);padding:.18rem .55rem;border-radius:12px;font-size:.72rem;font-weight:600;text-decoration:none}
+  .drive-link-chip:hover{background:rgba(37,87,167,.2)}
+
+  /* STATS */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.2rem}
+  .stat-card{background:var(--card);border-radius:var(--radius);padding:1.1rem 1.2rem;box-shadow:var(--shadow);border-left:4px solid var(--blue)}
+  .stat-card.green{border-left-color:var(--green)}.stat-card.amber{border-left-color:var(--accent)}.stat-card.red{border-left-color:var(--red)}
+  .stat-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.3rem}
+  .stat-value{font-family:'Inter',sans-serif;font-size:1.9rem;font-weight:700;color:var(--navy);line-height:1;letter-spacing:-.02em}
+  .stat-sub{font-size:.75rem;color:var(--muted);margin-top:.3rem}
+
+  /* TABLE */
+  .table-wrap{overflow-x:auto;border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:.83rem}
+  thead th{background:var(--navy);color:#fff;padding:.65rem .9rem;text-align:left;font-weight:600;
+    font-size:.77rem;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+  tbody tr:hover{background:rgba(37,87,167,.04)}
+  tbody td{padding:.6rem .9rem;color:var(--text);vertical-align:middle}
+  .empty-state{text-align:center;padding:2.5rem;color:var(--muted)}
+  .empty-state svg{width:48px;height:48px;opacity:.25;margin-bottom:.7rem;display:block;margin-left:auto;margin-right:auto}
+
+  /* BADGES */
+  .badge{display:inline-block;padding:.22rem .65rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap}
+  .badge-completed{background:var(--green-soft);color:#145523}
+  .badge-progress{background:var(--yellow-soft);color:#856404}
+  .badge-hold{background:var(--grey-soft);color:#495057}
+  .badge-notworking{background:var(--red-soft);color:#842029}
+
+  /* FILTER BAR */
+  .filter-bar{display:flex;gap:.7rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.2rem;
+    background:var(--card);border-radius:var(--radius);padding:1rem 1.2rem;box-shadow:var(--shadow)}
+  .filter-group{display:flex;flex-direction:column;gap:.3rem;min-width:120px}
+  .filter-group label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+  .filter-group select,.filter-group input{padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:7px;
+    font-family:inherit;font-size:.85rem;background:var(--bg);outline:none;transition:border-color .2s;min-width:0}
+  .filter-group select:focus,.filter-group input:focus{border-color:var(--blue)}
+  .btn-filter{padding:.5rem 1.2rem;background:var(--navy);color:#fff;border:none;border-radius:7px;
+    font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:background .2s;align-self:flex-end;white-space:nowrap}
+  .btn-filter:hover{background:var(--blue)}
+
+  /* SUMMARY */
+  .summary-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:1.2rem}
+  .progress-bar-wrap{background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-top:4px}
+  .progress-bar{height:100%;background:var(--green);border-radius:4px;transition:width .4s ease}
+  .task-row{display:flex;align-items:center;gap:.7rem;padding:.6rem 0;border-bottom:1px solid var(--border)}
+  .task-row:last-child{border-bottom:none}
+  .task-name{font-weight:600;font-size:.85rem;flex:1;min-width:0}
+  .task-count{font-size:.78rem;color:var(--muted);white-space:nowrap}
+
+  /* DAILY REPORT */
+  .daily-report-wrap{display:flex;flex-direction:column;gap:1rem}
+  .daily-summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:.4rem}
+  .daily-stat{background:var(--card);border-radius:var(--radius);padding:.9rem 1.1rem;box-shadow:var(--shadow);text-align:center}
+  .daily-stat-val{font-family:'Inter',sans-serif;font-size:1.9rem;font-weight:700;line-height:1;letter-spacing:-.02em}
+  .daily-stat-val.green{color:var(--green)}.daily-stat-val.red{color:var(--red)}.daily-stat-val.amber{color:var(--accent)}
+  .daily-stat-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:.25rem}
+  .daily-columns{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .daily-col-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .daily-col-header{padding:.75rem 1.1rem;font-family:'Inter',sans-serif;font-weight:600;font-size:.9rem;
+    display:flex;align-items:center;gap:.5rem}
+  .daily-col-header.updated{background:linear-gradient(90deg,#1a6b2e,#2d9e47);color:#fff}
+  .daily-col-header.not-updated{background:linear-gradient(90deg,#9b1c24,#d93025);color:#fff}
+  .daily-col-header svg{width:16px;height:16px;flex-shrink:0}
+  .daily-col-header .hcount{margin-left:auto;background:rgba(255,255,255,.25);padding:.1rem .5rem;border-radius:10px;font-size:.78rem}
+  .daily-col-body{padding:.4rem 0}
+  .daily-person-row{display:flex;justify-content:space-between;align-items:center;
+    padding:.45rem 1.1rem;font-size:.85rem;border-bottom:1px solid var(--bg);transition:background .15s}
+  .daily-person-row:last-child{border-bottom:none}
+  .daily-person-row:hover{background:var(--bg)}
+  .daily-person-name{font-weight:500}
+  .daily-person-badge{font-weight:700;padding:.15rem .55rem;border-radius:10px;font-size:.75rem}
+  .daily-person-badge.done{background:var(--green-soft);color:#145523}
+  .daily-person-badge.miss{background:var(--red-soft);color:#842029}
+  .daily-admin-note{font-size:.75rem;color:var(--muted);padding:.5rem 1.1rem;font-style:italic}
+  @media(max-width:700px){.daily-columns{grid-template-columns:1fr}.daily-summary-row{grid-template-columns:1fr 1fr}}
+
+  /* CALENDAR */
+  .cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
+  .cal-day-name{text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:.4rem 0}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .cal-cell{background:var(--card);border-radius:8px;min-height:90px;padding:.4rem .45rem;overflow:hidden}
+  .cal-cell.empty{background:rgba(0,0,0,.02)}
+  .cal-cell.today{background:rgba(37,87,167,.06);outline:2px solid var(--blue)}
+  .cal-date{font-weight:700;font-size:.78rem;color:var(--muted);margin-bottom:.3rem}
+  .cal-task{background:var(--navy);color:#fff;border-radius:4px;padding:.2rem .35rem;margin-bottom:2px;font-size:.65rem;line-height:1.3}
+  .cal-task.completed{background:#1a6b2e}.cal-task.in-progress{background:#9a6800}
+  .cal-task.hold{background:#5c6370}.cal-task.not-working{background:#9b1c24}
+
+  /* CALENDAR POPUP + LEAVE */
+  .cal-more{font-size:.65rem;color:var(--blue);font-weight:700;margin-top:1px;cursor:pointer;text-decoration:underline}
+  .cal-more:hover{color:var(--navy)}
+  .cal-task-leave{background:#e5e7eb;color:#6b7280;border-radius:4px;padding:.2rem .35rem;
+    margin-bottom:2px;font-size:.62rem;font-style:italic;line-height:1.3}
+  .cal-popup-overlay{position:fixed;inset:0;background:rgba(15,32,68,.5);z-index:7000;
+    display:none;align-items:flex-start;justify-content:center;padding:5vh 1rem;overflow-y:auto}
+  .cal-popup-box{background:#fff;border-radius:14px;padding:1.4rem 1.6rem;width:100%;max-width:520px;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);animation:fadeUp .2s ease}
+  .cal-popup-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+  .cal-popup-title{font-size:1rem;font-weight:700;color:var(--navy)}
+  .cal-popup-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.3rem;padding:.2rem .4rem;border-radius:5px}
+  .cal-popup-close:hover{background:var(--bg);color:var(--navy)}
+  .cal-popup-row{display:flex;align-items:flex-start;gap:.7rem;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.83rem}
+  .cal-popup-row:last-child{border-bottom:none}
+  .cal-popup-auditor{font-weight:700;color:var(--navy);min-width:110px;flex-shrink:0}
+  .cal-popup-detail{color:var(--text);flex:1}
+  .cal-popup-badge{flex-shrink:0}
+  .cal-popup-leave{color:#9ca3af;font-style:italic}
+
+
+  /* MASTER DATA */
+  .master-tabs{display:flex;gap:.5rem;margin-bottom:1.2rem;flex-wrap:wrap}
+  .master-tab{padding:.45rem 1rem;border-radius:7px;border:1.5px solid var(--border);background:var(--card);
+    font-family:inherit;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s}
+  .master-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .master-panel{display:none}.master-panel.active{display:block}
+  .master-add{display:flex;gap:.7rem;margin-bottom:1rem;flex-wrap:wrap;align-items:flex-end}
+  .master-add input,.master-add select{padding:.5rem .8rem;border:1.5px solid var(--border);border-radius:7px;
+    font-family:inherit;font-size:.85rem;background:var(--bg);outline:none;flex:1;min-width:100px}
+  .master-add input:focus,.master-add select:focus{border-color:var(--blue)}
+  .btn-add{padding:.5rem 1.1rem;background:var(--green);color:#fff;border:none;border-radius:7px;
+    font-family:inherit;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap}
+  .btn-add:hover{background:#145523}
+  .btn-del{background:none;border:none;cursor:pointer;color:var(--red);padding:2px;transition:opacity .2s}
+  .btn-del:hover{opacity:.7}
+  .btn-del svg{width:16px;height:16px}
+  .master-info{font-size:.78rem;color:var(--muted);background:rgba(37,87,167,.06);border:1px solid rgba(37,87,167,.15);
+    border-radius:8px;padding:.7rem 1rem;margin-bottom:1rem;line-height:1.6}
+  .master-info strong{color:var(--navy)}
+
+  /* SIDEBAR OVERLAY */
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150}
+  .admin-only{display:none}
+  body.is-admin .admin-only{display:revert}
+  body.is-admin button.admin-only{display:flex}
+  button.admin-only{display:none}
+
+  /* DRIVE PERMISSION MODAL */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(10,20,50,.55);z-index:500;
+    display:flex;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(3px)}
+  .modal-box{background:#fff;border-radius:18px;padding:2rem 2.2rem;width:100%;max-width:440px;
+    box-shadow:0 24px 60px rgba(0,0,0,.3);animation:fadeUp .35s ease}
+  .modal-icon{width:56px;height:56px;background:linear-gradient(135deg,#4285F4,#34A853);
+    border-radius:14px;display:grid;place-items:center;margin:0 auto 1.2rem}
+  .modal-icon svg{width:30px;height:30px;fill:#fff}
+  .modal-title{font-family:'Inter',sans-serif;font-size:1.1rem;color:var(--navy);text-align:center;font-weight:700;margin-bottom:.5rem}
+  .modal-desc{font-size:.85rem;color:var(--muted);text-align:center;line-height:1.6;margin-bottom:1.4rem}
+  .modal-desc strong{color:var(--navy)}
+  .modal-drive-badge{display:flex;align-items:center;gap:.6rem;background:#f0f4ff;border:1.5px solid #c7d6f7;
+    border-radius:10px;padding:.7rem 1rem;margin-bottom:1.4rem}
+  .modal-drive-badge svg{width:22px;height:22px;flex-shrink:0}
+  .modal-drive-badge-text{font-size:.78rem;color:var(--navy);line-height:1.4}
+  .modal-drive-badge-text strong{display:block;font-size:.82rem}
+  .btn-allow{width:100%;padding:.75rem;background:linear-gradient(90deg,#4285F4,#34A853);color:#fff;
+    border:none;border-radius:9px;font-family:inherit;font-size:.95rem;font-weight:700;
+    cursor:pointer;transition:opacity .2s;margin-bottom:.7rem}
+  .btn-allow:hover{opacity:.9}
+  .btn-skip{width:100%;padding:.5rem;background:none;border:none;color:var(--muted);
+    font-family:inherit;font-size:.82rem;cursor:pointer;transition:color .2s}
+  .btn-skip:hover{color:var(--navy)}
+  .drive-access-chip{display:inline-flex;align-items:center;gap:.35rem;background:#e8f5e9;
+    color:#1b5e20;padding:.22rem .7rem;border-radius:20px;font-size:.72rem;font-weight:700}
+  /* Attach file button in form */
+  .attach-upload-btn{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;
+    background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:inherit;
+    font-size:.85rem;font-weight:600;cursor:pointer;transition:background .2s;width:100%;justify-content:center}
+  .attach-upload-btn:hover{background:var(--blue)}
+  .attach-upload-btn:disabled{opacity:.5;cursor:not-allowed}
+  .attach-upload-btn svg{width:16px;height:16px;flex-shrink:0}
+
+  /* FORGOT PASSWORD PANEL */
+  .auth-tab-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
+  .forgot-link{background:none;border:none;color:var(--blue);font-size:.8rem;cursor:pointer;font-family:inherit;padding:0;text-decoration:underline}
+  .forgot-link:hover{color:var(--navy)}
+  /* USER MANAGEMENT BUTTONS */
+  .btn-user-action{padding:.25rem .6rem;border:none;border-radius:5px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+  .btn-reset-pw{background:#fff3cd;color:#856404}.btn-reset-pw:hover{background:#ffc107;color:#fff}
+  .btn-disable{background:#f8d7da;color:#842029}.btn-disable:hover{background:#dc3545;color:#fff}
+  .btn-enable{background:#d1e7dd;color:#145523}.btn-enable:hover{background:#198754;color:#fff}
+  .btn-del-user{background:#f8d7da;color:#842029}.btn-del-user:hover{background:#dc3545;color:#fff}
+  .badge-disabled{background:#f8d7da;color:#842029;display:inline-block;padding:.15rem .5rem;border-radius:10px;font-size:.68rem;font-weight:700}
+  .badge-active{background:#d1e7dd;color:#145523;display:inline-block;padding:.15rem .5rem;border-radius:10px;font-size:.68rem;font-weight:700}
+  /* RESET PASSWORD MODAL */
+  .reset-modal-backdrop{position:fixed;inset:0;background:rgba(10,20,50,.55);z-index:200;display:none;align-items:center;justify-content:center}
+  .reset-modal-box{background:#fff;border-radius:16px;padding:2rem;max-width:360px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .reset-modal-title{font-family:'Inter',sans-serif;font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:.5rem}
+  .reset-modal-sub{font-size:.82rem;color:var(--muted);margin-bottom:1.2rem}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--navy);color:#fff;
+    padding:.8rem 1.2rem;border-radius:10px;font-size:.85rem;font-weight:600;z-index:999;
+    transform:translateY(2rem);opacity:0;transition:all .3s;pointer-events:none;max-width:300px;
+    display:flex;align-items:center;gap:.5rem}
+  .toast.show{transform:translateY(0);opacity:1}
+  .toast.success{border-left:4px solid var(--accent)}.toast.error{border-left:4px solid var(--red)}
+
+
+
+  /* VISUAL REPORTS */
+  .vr-filter-bar{display:flex;gap:.7rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.4rem;
+    background:var(--card);border-radius:var(--radius);padding:1rem 1.2rem;box-shadow:var(--shadow)}
+  .charts-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.2rem}
+  .charts-grid-1{display:grid;grid-template-columns:1fr;gap:1.2rem;margin-bottom:1.2rem}
+  .chart-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.4rem}
+  .chart-title{font-family:'Inter',sans-serif;font-size:.88rem;color:var(--navy);font-weight:600;letter-spacing:.01em;
+    margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+  .chart-title svg{width:17px;height:17px;flex-shrink:0}
+  .chart-wrap{position:relative;width:100%}
+  .chart-wrap canvas{max-width:100%}
+  .heatmap-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:.5rem}
+  .heatmap-cell{aspect-ratio:1;border-radius:3px;cursor:default;transition:transform .1s}
+  .heatmap-cell:hover{transform:scale(1.2)}
+  .hm-0{background:#eef0f4}.hm-1{background:#c6dbef}.hm-2{background:#84b9d6}
+  .hm-3{background:#3182bd}.hm-4{background:#08519c}
+  .heatmap-legend{display:flex;align-items:center;gap:.4rem;margin-top:.7rem;font-size:.72rem;color:var(--muted)}
+  .hm-lbl{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+  .heatmap-months{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:2px}
+  .hm-month-label{font-size:.62rem;color:var(--muted);font-weight:600;text-align:center}
+  @media(max-width:768px){.charts-grid-2{grid-template-columns:1fr}}
+
+  /* DUE DATE FORM & REPORT */
+  .due-badge-pending{background:#fff3cd;color:#856404;padding:.22rem .65rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap}
+  .due-badge-completed{background:#d4edda;color:#145523;padding:.22rem .65rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap}
+  .due-badge-overdue{background:#f8d7da;color:#842029;padding:.22rem .65rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap}
+  .ageing-warn{color:#842029;font-weight:700}
+  .ageing-ok{color:#145523;font-weight:600}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+  /* MOBILE */
+  @media(max-width:900px){.stats-grid{grid-template-columns:1fr 1fr}.summary-grid{grid-template-columns:1fr}.daily-grid{grid-template-columns:1fr}}
+  @media(max-width:768px){
+    .sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}
+    .sidebar-overlay.open{display:block}.main{margin-left:0;padding:1rem}.hamburger{display:block}
+    .form-grid{grid-template-columns:1fr 1fr;gap:.6rem}.form-grid .full{grid-column:1/-1}
+    .stats-grid{grid-template-columns:1fr 1fr}
+    .cal-cell{min-height:50px;padding:.25rem}.cal-task{display:none}
+  }
+  @media(max-width:480px){.stats-grid{grid-template-columns:1fr}.filter-bar{flex-direction:column}.filter-group{width:100%}}
+
+  /* ENTRY EDIT MODAL */
+  .entry-modal-overlay{position:fixed;inset:0;background:rgba(15,32,68,.55);z-index:7000;
+    display:none;align-items:flex-start;justify-content:center;padding:3vh 1rem;overflow-y:auto}
+  .entry-modal-box{background:#fff;border-radius:16px;padding:1.6rem 1.8rem;width:100%;max-width:780px;
+    box-shadow:0 24px 60px rgba(0,0,0,.25);animation:fadeUp .25s ease;margin:auto}
+  .entry-modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem}
+  .entry-modal-title{font-size:1.05rem;font-weight:700;color:var(--navy)}
+  .entry-modal-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.4rem;
+    padding:.2rem .5rem;border-radius:6px;line-height:1}
+  .entry-modal-close:hover{background:var(--bg);color:var(--navy)}
+  .entry-modal-actions{display:flex;gap:.7rem;margin-top:1.3rem;justify-content:flex-end}
+  .btn-edit{background:none;border:none;cursor:pointer;color:var(--blue);padding:3px;transition:opacity .2s}
+  .btn-edit:hover{opacity:.7}
+  .btn-edit svg{width:15px;height:15px}
+  .action-btns{display:flex;gap:.3rem;align-items:center}
+
+  /* ── FIRM FEATURE ── */
+  .firm-pill{display:inline-flex;align-items:center;padding:.18rem .65rem;border-radius:20px;
+    font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+  .firm-pill.firm-SNS{background:#dbeafe;color:#1d4ed8}
+  .firm-pill.firm-MKM{background:#ede9fe;color:#6d28d9}
+  .firm-pill.firm-none{background:#f1f5f9;color:#64748b}
+  .sidebar-firm{padding:.35rem 1.2rem .55rem;display:flex;align-items:center;gap:.45rem;
+    font-size:.68rem;font-weight:700;color:rgba(255,255,255,.45);letter-spacing:.05em;text-transform:uppercase}
+  .sidebar-firm-pill{background:rgba(255,255,255,.13);color:#fff;padding:.14rem .55rem;
+    border-radius:10px;font-size:.7rem;font-weight:700;letter-spacing:.05em}
+  .firm-modal-overlay{position:fixed;inset:0;background:rgba(15,32,68,.55);z-index:6000;
+    display:none;align-items:center;justify-content:center;padding:1.5rem}
+  .firm-modal-box{background:#fff;border-radius:14px;padding:1.6rem 1.8rem;width:100%;max-width:340px;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);animation:fadeUp .2s ease}
+  .firm-modal-ttl{font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:.3rem}
+  .firm-modal-sub{font-size:.78rem;color:var(--muted);margin-bottom:1rem}
+  .firm-opt{display:flex;align-items:center;gap:.75rem;padding:.7rem .9rem;
+    border:1.5px solid var(--border);border-radius:8px;margin-bottom:.5rem;
+    cursor:pointer;transition:all .15s;font-weight:600;font-size:.88rem;color:var(--navy)}
+  .firm-opt:hover{border-color:#3b82f6;background:#f0f4ff}
+  .firm-opt.sel{border-color:#3b82f6;background:#eef2ff}
+  .firm-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+  .dot-SNS{background:#3b82f6}.dot-MKM{background:#8b5cf6}.dot-none{background:#94a3b8}
+  .firm-check{margin-left:auto;color:#3b82f6;font-weight:800;font-size:.95rem}
+  .report-firm-tag{display:inline-flex;align-items:center;padding:.22rem .7rem;
+    border-radius:6px;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .rtag-SNS{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe}
+  .rtag-MKM{background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe}
+</style>
+</head>
+<body>
+
+<!-- SUPABASE CONFIG SCREEN -->
+<div id="sb-config-screen">
+  <div class="sb-config-box">
+    <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:1rem">
+      <div style="width:44px;height:44px;background:var(--navy);border-radius:10px;display:grid;place-items:center;flex-shrink:0">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f0a500" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      </div>
+      <div>
+        <h2 style="margin:0">Connect to Supabase</h2>
+        <p style="margin:0;font-size:.78rem;color:var(--muted)">One-time setup — share this file with your team after!</p>
+      </div>
+    </div>
+    <div class="sb-step">
+      <div class="sb-step-num">Step 1</div>
+      <p>Go to <strong>supabase.com</strong> → Create a free project → Go to <code>Project Settings → API</code></p>
+    </div>
+    <div class="sb-step">
+      <div class="sb-step-num">Step 2</div>
+      <p>Go to <code>SQL Editor</code> → Run the setup SQL from the included <strong>setup-guide.html</strong> file</p>
+    </div>
+    <div class="sb-step">
+      <div class="sb-step-num">Step 3</div>
+      <p>Paste your <strong>Project URL</strong> and <strong>anon public key</strong> below</p>
+    </div>
+    <div class="form-group" style="margin-top:1.2rem">
+      <label>Supabase Project URL</label>
+      <input type="url" id="sb-url-input" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Supabase Anon Key</label>
+      <input type="text" id="sb-key-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off">
+    </div>
+    <button class="btn-primary" onclick="saveSbConfig()">🔗 Connect &amp; Continue</button>
+    <div class="sb-config-msg" id="sb-config-msg"></div>
+    <div style="margin-top:1rem;padding:.8rem;background:#f8f9fb;border-radius:8px;font-size:.75rem;color:var(--muted);text-align:center">
+      🔒 Your URL and key are stored only in your browser. Data is secured by Supabase.
+    </div>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-msg" id="loading-msg">Loading data…</div>
+  <div class="loading-sub" id="loading-sub">Connecting to Supabase</div>
+</div>
+
+<!-- RESET CONFIG BUTTON (dev helper) -->
+
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" style="display:none">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+      </div>
+      <div><h1>Daily Task Tracker</h1><span>Audit Team Portal</span></div>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Register</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="auth-panel active" id="panel-login">
+      <div class="form-group"><label>Username</label><input type="text" id="login-user" placeholder="Enter your username" autocomplete="username"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="Enter your password" autocomplete="current-password"></div>
+      <button class="btn-primary" onclick="doLogin()">Sign In</button>
+      <div class="auth-msg" id="login-msg"></div>
+      <div style="text-align:center;margin-top:.6rem">
+        <button class="forgot-link" onclick="switchAuthTab('forgot')">Forgot password?</button>
+      </div>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="auth-panel" id="panel-register">
+      <div class="form-group"><label>Full Name</label><input type="text" id="reg-name" placeholder="Your full name"></div>
+      <div class="form-group"><label>Username</label><input type="text" id="reg-user" placeholder="Choose a username"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="reg-pass" placeholder="Choose a password"></div>
+      <button class="btn-primary" onclick="doRegister()">Create Account</button>
+      <div class="auth-msg" id="reg-msg"></div>
+      <div class="auth-note">Your company access will be assigned by the administrator.</div>
+    </div>
+
+    <!-- FORGOT PASSWORD -->
+    <div class="auth-panel" id="panel-forgot">
+      <div class="auth-note" style="margin-bottom:1rem;font-size:.83rem;line-height:1.6">
+        Enter your username below. The admin will see your reset request in <strong>Master Data → Users</strong> and reset your password for you.
+      </div>
+      <div class="form-group"><label>Your Username</label><input type="text" id="forgot-user" placeholder="Enter your username"></div>
+      <button class="btn-primary" onclick="doForgotPassword()">Send Reset Request</button>
+      <div class="auth-msg" id="forgot-msg"></div>
+      <div style="text-align:center;margin-top:.6rem">
+        <button class="forgot-link" onclick="switchAuthTab('login')">← Back to Sign In</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /#auth-screen -->
+
+<!-- RESET PASSWORD MODAL (admin use) -->
+<div class="reset-modal-backdrop" id="reset-pw-modal">
+  <div class="reset-modal-box">
+    <div class="reset-modal-title">Reset Password</div>
+    <div class="reset-modal-sub" id="reset-pw-for"></div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">New Password</label>
+      <input type="text" id="reset-pw-input" placeholder="Enter new password for user"
+        style="width:100%;padding:.55rem .8rem;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.9rem;outline:none;box-sizing:border-box">
+    </div>
+    <div style="display:flex;gap:.7rem">
+      <button onclick="confirmResetPassword()" style="flex:1;padding:.6rem;background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer">Set Password</button>
+      <button onclick="closeResetModal()" style="flex:1;padding:.6rem;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;color:var(--muted)">Cancel</button>
+    </div>
+    <div id="reset-pw-msg" style="margin-top:.6rem;font-size:.8rem;text-align:center"></div>
+  </div>
+</div>
+
+<!-- DRIVE PERMISSION MODAL -->
+<div class="modal-backdrop" id="drive-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-icon">
+      <svg viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+        <path d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.5c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/>
+        <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z" fill="#ea4335"/>
+        <path d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.1.45-4.5 1.2z" fill="#00832d"/>
+        <path d="M59.8 52.5H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.1-.45 4.5-1.2z" fill="#2684fc"/>
+        <path d="M73.4 26.5l-12.55-21.7C60.05 3.35 58.9 2.25 57.55 1.45L43.8 25.25 59.8 52.75h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+      </svg>
+    </div>
+    <div class="modal-title">Sign in to Google Drive</div>
+    <div class="modal-desc">
+      To upload files directly to the shared <strong>Task Tracker</strong> folder, please sign in to Google. Your files will be automatically saved to a daily date folder inside the shared drive.
+    </div>
+    <div class="modal-drive-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#4285F4" stroke-width="1.8" style="width:22px;height:22px;flex-shrink:0"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      <div class="modal-drive-badge-text">
+        <strong>Task Tracker — Shared Folder</strong>
+        Files saved to: Task Tracker → YYYY-MM-DD → your file
+      </div>
+    </div>
+
+    <!-- Sign in with Google button (renders via GIS library) -->
+    <div id="g-signin-btn" style="display:flex;justify-content:center;margin-bottom:.8rem"></div>
+
+    <!-- Shown after successful sign-in -->
+    <div id="drive-signed-in" style="display:none;text-align:center;margin-bottom:.9rem">
+      <div style="display:inline-flex;align-items:center;gap:.5rem;background:#e8f5e9;padding:.5rem 1rem;border-radius:20px;font-size:.83rem;font-weight:600;color:#1b5e20">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg>
+        Signed in — Drive access granted
+      </div>
+      <div id="drive-user-email" style="font-size:.75rem;color:var(--muted);margin-top:.35rem"></div>
+    </div>
+
+    <div id="drive-modal-status" style="text-align:center;font-size:.8rem;min-height:1.2em;margin-bottom:.5rem;color:var(--blue)"></div>
+
+    <button class="btn-allow" id="btn-drive-continue" onclick="closeDriveModal()" style="display:none">
+      Continue to App →
+    </button>
+    <button class="btn-skip" onclick="dismissDriveModal()">Skip — I will not upload files this session</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div>
+      <div class="sidebar-brand-text"><h2>Task Tracker</h2><span>Audit Portal</span></div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="sidebar-avatar">J</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sidebar-username">Jay</div>
+        <div class="sidebar-user-role" id="sidebar-role">Auditor</div>
+      </div>
+    </div>
+    <div class="sidebar-firm" id="sb-firm-row" style="display:none">🏢 <span class="sidebar-firm-pill" id="sb-firm-pill"></span></div>
+    <nav>
+      <div class="nav-section">Main</div>
+      <button class="nav-item active" onclick="showPage('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+      </button>
+      <button class="nav-item" onclick="showPage('form')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>New Entry
+      </button>
+      <button class="nav-item" onclick="showPage('dueDateForm')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/><line x1="12" y1="13" x2="12" y2="17"/><line x1="10" y1="15" x2="14" y2="15"/></svg>Due Date Form
+      </button>
+      <button class="nav-item" onclick="showPage('database')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Database
+      </button>
+      <div class="nav-section">Reports</div>
+      <button class="nav-item" onclick="showPage('dueDateReport')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17v-2m3 2v-4m3 4v-6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>Due Date Report
+      </button>
+      <button class="nav-item" onclick="showPage('summary')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Task Summary
+      </button>
+      <button class="nav-item" onclick="showPage('daily')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Daily Report
+      </button>
+      <button class="nav-item" onclick="showPage('visualReports')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Visual Reports
+      </button>
+      <button class="nav-item" onclick="showPage('calendar')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendar
+      </button>
+      <div class="nav-section">Settings</div>
+      <button class="nav-item" onclick="showPage('master')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>Master Data
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="doLogout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+      </div>
+      <div class="topbar-right"><span class="chip" id="topbar-date"></span></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>My Recent Entries
+        </div>
+        <div class="table-wrap" id="dash-recent"></div>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div class="page" id="page-form">
+      <div class="card">
+        <div class="form-header"><h2>New Task Entry</h2><p>Fill in the details below to submit a new task entry</p></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Month *</label>
+            <select id="f-month" style="background:#f0f4ff;font-weight:600"></select>
+          </div>
+          <div class="form-group">
+            <label>Process Owner</label>
+            <input type="text" id="f-processowner" placeholder="Process owner name">
+          </div>
+          <div class="form-group">
+            <label>Auditor *</label>
+            <select id="f-auditor" onchange="onAuditorChange()"></select>
+          </div>
+          <div class="form-group">
+            <label>Critical Issue's</label>
+            <select id="f-critical"><option value="">Select…</option><option>Yes</option><option>No</option></select>
+          </div>
+          <div class="form-group">
+            <label>Company *</label>
+            <select id="f-company" onchange="onCompanyChange()"></select>
+          </div>
+          <div class="form-group">
+            <label>Discussion</label>
+            <input type="text" id="f-discussion" placeholder="Discussion notes">
+          </div>
+          <div class="form-group">
+            <label>Task Type *</label>
+            <select id="f-tasktype" onchange="onTaskTypeChange()"></select>
+          </div>
+          <div class="form-group">
+            <label>Impact Found</label>
+            <input type="text" id="f-impact" placeholder="Impact found">
+          </div>
+          <div class="form-group">
+            <label>Sub Task</label>
+            <select id="f-task"></select>
+          </div>
+          <div class="form-group">
+            <label>Report Link</label>
+            <input type="text" id="f-reportlink" placeholder="URL or file path">
+          </div>
+          <div class="form-group">
+            <label>Manually Task</label>
+            <input type="text" id="f-manual" placeholder="Custom task if not in list">
+          </div>
+          <div class="form-group">
+            <label>Remark</label>
+            <input type="text" id="f-remark" placeholder="Additional remarks">
+          </div>
+          <div class="form-group">
+            <label>Date *</label>
+            <input type="date" id="f-date">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Attach File(s) — Upload to Google Drive</label>
+            <div class="attach-panel">
+              <!-- Upload button row -->
+              <div class="attach-panel-top">
+                <button class="attach-upload-btn" id="btn-attach-file" onclick="triggerFileUpload()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Choose File &amp; Upload to Drive
+                </button>
+                <span id="drive-signin-chip" style="font-size:.73rem;display:none"></span>
+              </div>
+              <!-- Hidden real file input -->
+              <input type="file" id="file-input-real" style="display:none" onchange="uploadFileToDriveViaGAS(this)">
+              <!-- Upload progress / status -->
+              <div class="attach-request-status" id="attach-request-status"></div>
+              <!-- Attached files list (chips) -->
+              <div class="attach-files-list" id="attach-files-list">
+                <span class="attach-empty">No files attached yet.</span>
+              </div>
+            </div>
+            <!-- Admin GAS URL setup (hidden from regular users, visible to admin) -->
+            <div id="gas-admin-setup" style="display:none;margin-top:.5rem;background:rgba(240,165,0,.1);border:1px solid var(--accent);border-radius:8px;padding:.65rem .9rem;font-size:.78rem;color:var(--navy)">
+              <strong>⚙ Admin:</strong> Paste your Google Apps Script Web App URL to enable file uploads.
+              <div style="display:flex;gap:.5rem;margin-top:.4rem;align-items:center">
+                <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/…/exec"
+                  style="flex:1;padding:.35rem .6rem;border:1.5px solid var(--border);border-radius:6px;font-size:.78rem;outline:none;background:#fff">
+                <button onclick="saveGasUrl()" style="padding:.35rem .85rem;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap">Save</button>
+                <span id="gas-url-status" style="font-size:.75rem;color:var(--green);white-space:nowrap"></span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Status *</label>
+            <select id="f-status"><option value="">Select…</option><option>Completed</option><option>In Progress</option><option>Hold</option><option>Not Working</option></select>
+          </div>
+        </div>
+        <p class="required-note">* Required fields.</p>
+        <div class="form-actions">
+          <button class="btn-secondary" onclick="clearForm()">Clear</button>
+          <button class="btn-save" onclick="saveEntry()">💾 Save Entry</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DATABASE -->
+    <div class="page" id="page-database">
+      <div class="filter-bar">
+        <div class="filter-group"><label>Month</label><select id="db-month"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Company</label><select id="db-company"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Task Type</label><select id="db-tasktype"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Status</label>
+          <select id="db-status"><option value="">All</option><option>Completed</option><option>In Progress</option><option>Hold</option><option>Not Working</option></select>
+        </div>
+        <button class="btn-filter" onclick="renderDatabase()">Apply</button>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          Task Database
+          <span style="margin-left:auto;font-size:.75rem;font-weight:400;color:var(--muted)" id="db-count"></span>
+        </div>
+        <div class="table-wrap" id="db-table"></div>
+      </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="page" id="page-summary">
+      <div class="filter-bar">
+<div class="filter-group" id="sum-firm-group" style="display:none"><label>Firm</label><select id="sum-firm" onchange="renderSummary()"><option value="">All Firms</option><option>SNS</option><option>MKM</option></select></div>
+        <div class="filter-group"><label>Company</label><select id="sum-company" onchange="renderSummary()"></select></div>
+        <div class="filter-group"><label>Month</label><select id="sum-month" onchange="renderSummary()"></select></div>
+        <div class="filter-group"><label>Detail Task Type</label><select id="sum-task" onchange="renderSummary()"></select></div>
+      </div>
+      <div class="summary-grid">
+        <div class="card"><div class="card-title">Task Progress Summary</div><div id="summary-left"></div></div>
+        <div class="card"><div class="card-title">Sub-Task Detail</div><div class="table-wrap" id="summary-right"></div></div>
+      </div>
+    </div>
+
+    <!-- DAILY REPORT -->
+    <div class="page" id="page-daily">
+      <div class="filter-bar" id="daily-firm-bar">
+        <div class="filter-group" id="daily-firm-group" style="display:none"><label>Firm</label><select id="daily-firm" onchange="renderDaily()"><option value="">All Firms</option><option>SNS</option><option>MKM</option></select></div>
+        <div class="filter-group"><label>Date</label><input type="date" id="daily-date-filter" onchange="renderDaily()"></div>
+      </div>
+      <div class="card" style="margin-bottom:1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+          <div class="card-title" style="margin:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Daily Entry Report — All Auditors
+          </div>
+          <span style="font-size:.82rem;color:var(--muted);font-weight:600" id="daily-date-label"></span>
+        </div>
+        <div id="daily-admin-warn" style="display:none;margin-top:.7rem;font-size:.78rem;background:var(--red-soft);color:#842029;padding:.5rem .8rem;border-radius:6px;font-weight:600">
+          🔒 This report is visible to administrators only.
+        </div>
+      </div>
+      <div class="daily-summary-row" id="daily-summary-stats"></div>
+      <div class="daily-columns" id="daily-columns"></div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div class="page" id="page-calendar">
+      <div class="filter-bar">
+<div class="filter-group" id="cal-firm-group" style="display:none"><label>Firm</label><select id="cal-firm" onchange="renderCalendar()"><option value="">All Firms</option><option>SNS</option><option>MKM</option></select></div>
+        <div class="filter-group"><label>Month</label><select id="cal-month" onchange="renderCalendar()"></select></div>
+        <div class="filter-group"><label>Year</label><select id="cal-year" onchange="renderCalendar()"></select></div>
+        <div class="filter-group"><label>Person</label><select id="cal-person" onchange="renderCalendar()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Company</label><select id="cal-company-f" onchange="renderCalendar()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Status</label>
+          <select id="cal-status" onchange="renderCalendar()"><option value="">All</option><option>Completed</option><option>In Progress</option><option>Hold</option><option>Not Working</option></select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="justify-content:space-between">
+          <span id="cal-title">Calendar</span>
+          <span style="font-size:.8rem;font-weight:500;color:var(--muted)">✅ Completed: <strong id="cal-completed-count" style="color:var(--green)">0</strong></span>
+        </div>
+        <div class="cal-header" id="cal-header"></div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+    </div>
+
+
+
+    <!-- VISUAL REPORTS -->
+    <div class="page" id="page-visualReports">
+      <div class="vr-filter-bar">
+        <div class="filter-group" id="vr-firm-group" style="display:none"><label>Firm</label><select id="vr-firm" onchange="renderVisualReports()"><option value="">All Firms</option><option>SNS</option><option>MKM</option></select></div>
+        <div class="filter-group"><label>Month</label><select id="vr-month" onchange="renderVisualReports()"><option value="">All Months</option></select></div>
+        <div class="filter-group"><label>Company</label><select id="vr-company" onchange="renderVisualReports()"><option value="">All Companies</option></select></div>
+        <div class="filter-group"><label>Auditor</label><select id="vr-auditor" onchange="renderVisualReports()"><option value="">All Auditors</option></select></div>
+      </div>
+
+      <!-- Row 1: Team Performance + Company Completion -->
+      <div class="charts-grid-2">
+        <div class="chart-card">
+          <div class="chart-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            Team Performance Overview
+          </div>
+          <div class="chart-wrap" style="height:280px"><canvas id="chart-team"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            Company-wise Task Completion
+          </div>
+          <div class="chart-wrap" style="height:280px"><canvas id="chart-company"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 2: Monthly Trend -->
+      <div class="charts-grid-1">
+        <div class="chart-card">
+          <div class="chart-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            Monthly Trend — Tasks Submitted vs Completed
+          </div>
+          <div class="chart-wrap" style="height:240px"><canvas id="chart-trend"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Daily Heatmap -->
+      <div class="charts-grid-1">
+        <div class="chart-card">
+          <div class="chart-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+            Daily Activity Heatmap — Last 12 Weeks
+          </div>
+          <div id="heatmap-container"></div>
+          <div class="heatmap-legend">
+            <span>Less</span>
+            <div class="hm-lbl hm-0"></div>
+            <div class="hm-lbl hm-1"></div>
+            <div class="hm-lbl hm-2"></div>
+            <div class="hm-lbl hm-3"></div>
+            <div class="hm-lbl hm-4"></div>
+            <span>More</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DUE DATE FORM -->
+    <div class="page" id="page-dueDateForm">
+      <div class="card">
+        <div class="form-header">
+          <h2>📅 Due Date Form</h2>
+          <p>Set due dates for tasks assigned to auditors</p>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Auditor Name *</label>
+            <select id="dd-auditor" onchange="onDdAuditorChange()"><option value="">Select Auditor…</option></select>
+          </div>
+          <div class="form-group">
+            <label>Company Name *</label>
+            <select id="dd-company" onchange="onDdCompanyChange()" disabled><option value="">Select Company…</option></select>
+          </div>
+          <div class="form-group">
+            <label>Task (Task Type) *</label>
+            <select id="dd-tasktype" disabled><option value="">Select Task Type…</option></select>
+          </div>
+          <div class="form-group">
+            <label>Due Date *</label>
+            <input type="date" id="dd-duedate">
+          </div>
+          <div class="form-group">
+            <label>Remark</label>
+            <input type="text" id="dd-remark" placeholder="Optional remark…">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-secondary" onclick="clearDdForm()">Clear</button>
+          <button class="btn-save" onclick="saveDueDate()">💾 Save Due Date</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Saved Due Dates
+          <span style="margin-left:auto;font-size:.75rem;font-weight:400;color:var(--muted)" id="dd-list-count"></span>
+        </div>
+        <div class="filter-bar" style="margin-bottom:1rem">
+          <div class="filter-group"><label>Auditor</label><select id="dd-filter-auditor" onchange="renderDueDateList()"><option value="">All</option></select></div>
+          <div class="filter-group"><label>Company</label><select id="dd-filter-company" onchange="renderDueDateList()"><option value="">All</option></select></div>
+        </div>
+        <div class="table-wrap" id="dd-list-table"></div>
+      </div>
+    </div>
+
+    <!-- DUE DATE REPORT -->
+    <div class="page" id="page-dueDateReport">
+      <div class="filter-bar">
+<div class="filter-group" id="ddr-firm-group" style="display:none"><label>Firm</label><select id="ddr-firm" onchange="renderDueDateReport()"><option value="">All Firms</option><option>SNS</option><option>MKM</option></select></div>
+        <div class="filter-group"><label>Company</label><select id="ddr-company" onchange="renderDueDateReport()"><option value="">All Companies</option></select></div>
+        <div class="filter-group"><label>Month</label><select id="ddr-month" onchange="renderDueDateReport()"><option value="">All Months</option></select></div>
+        <div class="filter-group"><label>Status</label>
+          <select id="ddr-status" onchange="renderDueDateReport()">
+            <option value="">All</option>
+            <option value="Pending">Pending</option>
+            <option value="Completed">Completed</option>
+            <option value="Overdue">Overdue</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;vertical-align:middle;margin-right:.3rem"><path d="M9 17v-2m3 2v-4m3 4v-6M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg>
+            Due Date Report
+          </span>
+          <div style="display:flex;gap:.8rem;font-size:.78rem;font-weight:600">
+            <span id="ddr-stat-total" style="color:var(--muted)"></span>
+            <span id="ddr-stat-completed" style="color:var(--green)"></span>
+            <span id="ddr-stat-pending" style="color:#856404"></span>
+            <span id="ddr-stat-overdue" style="color:var(--red)"></span>
+          </div>
+        </div>
+        <div class="table-wrap" id="ddr-table"></div>
+      </div>
+    </div>
+
+    <!-- MASTER DATA -->
+    <div class="page" id="page-master">
+      <div class="master-tabs">
+        <button class="master-tab active" onclick="switchMasterTab('subtasks')">Company → Task → Sub Task</button>
+        <button class="master-tab admin-only" onclick="switchMasterTab('users')">Users</button>
+      </div>
+
+      <!-- AUDITOR-COMPANY ASSIGNMENTS (hidden - not used) -->
+      <div class="master-panel card" id="master-auditor-company" style="display:none">
+        <div class="card-title">Auditor → Company Assignments</div>
+        <div class="master-info">
+          <strong>Privacy Logic:</strong> When an auditor is selected in the form, only the companies assigned here will appear in the Company dropdown. This controls data visibility per auditor.
+        </div>
+        <div class="master-add">
+          <select id="add-ac-auditor"><option value="">Select Auditor…</option></select>
+          <select id="add-ac-company"><option value="">Select Company…</option></select>
+          <button class="btn-add" onclick="addAuditorCompany()">+ Assign</button>
+        </div>
+        <div style="display:flex;gap:.7rem;margin-bottom:1rem;flex-wrap:wrap">
+          <div class="filter-group" style="min-width:150px">
+            <label>Filter by Auditor</label>
+            <select id="filter-ac-auditor" onchange="renderAuditorCompanyList()"><option value="">All Auditors</option></select>
+          </div>
+        </div>
+        <div id="list-auditor-company"></div>
+      </div>
+
+      <!-- AUDITOR-TASKTYPE ASSIGNMENTS (hidden - not used) -->
+      <div class="master-panel card" id="master-auditor-tasktype" style="display:none">
+        <div class="card-title">Auditor → Company → Task Type Assignments</div>
+        <div class="master-info">
+          <strong>Privacy Logic:</strong> When an auditor selects a company in the form, only the task types assigned here (for that auditor + company combination) will appear. This is a 3-level filter: Auditor → Company → Task Type.
+        </div>
+        <div class="master-add">
+          <select id="add-att-auditor" onchange="syncAttCompanies()"><option value="">Select Auditor…</option></select>
+          <select id="add-att-company"><option value="">Select Company…</option></select>
+          <select id="add-att-tasktype"><option value="">Select Task Type…</option></select>
+          <button class="btn-add" onclick="addAuditorTaskType()">+ Assign</button>
+        </div>
+        <div style="display:flex;gap:.7rem;margin-bottom:1rem;flex-wrap:wrap">
+          <div class="filter-group" style="min-width:150px">
+            <label>Filter by Auditor</label>
+            <select id="filter-att-auditor" onchange="renderAuditorTaskTypeList()"><option value="">All</option></select>
+          </div>
+          <div class="filter-group" style="min-width:150px">
+            <label>Filter by Company</label>
+            <select id="filter-att-company" onchange="renderAuditorTaskTypeList()"><option value="">All</option></select>
+          </div>
+        </div>
+        <div id="list-auditor-tasktype"></div>
+      </div>
+
+      <!-- COMPANY → TASKTYPE → SUBTASK -->
+      <div class="master-panel active card" id="master-subtasks">
+        <div class="card-title">Company → Task Type → Sub Task Master</div>
+        <div class="master-info">
+          <strong>Note:</strong> This master defines which sub-tasks exist under each Company + Task Type combination.
+        </div>
+        <!-- Add new company — admin only -->
+        <div style="margin-bottom:1.2rem">
+          <div class="card-title" style="font-size:.85rem">Add Company</div>
+          <div class="master-add"><input type="text" id="add-company-name" placeholder="Company name…"><button class="btn-add" onclick="addCompany()">+ Add</button></div>
+        </div>
+        <div id="list-companies"></div>
+        <!-- Add new task type — admin only -->
+        <div style="margin-bottom:1.2rem">
+          <div class="card-title" style="font-size:.85rem">Add Task Type</div>
+          <div class="master-add"><input type="text" id="add-tasktype-name" placeholder="Task type name…"><button class="btn-add" onclick="addTaskType()">+ Add</button></div>
+        </div>
+        <div id="list-tasktypes"></div>
+        <!-- Add sub task — admin only -->
+        <div>
+          <div class="card-title" style="font-size:.85rem">Add Sub Task</div>
+          <div class="master-add">
+            <select id="add-st-company"><option value="">Company…</option></select>
+            <select id="add-st-tasktype"><option value="">Task Type…</option></select>
+            <input type="text" id="add-st-name" placeholder="Sub task name…">
+            <button class="btn-add" onclick="addSubTask()">+ Add</button>
+          </div>
+          <div style="display:flex;gap:.7rem;margin-top:.8rem;flex-wrap:wrap">
+            <div class="filter-group" style="min-width:140px">
+              <label>Filter Company</label>
+              <select id="filter-st-company" onchange="renderSubTaskList()"><option value="">All</option></select>
+            </div>
+            <div class="filter-group" style="min-width:140px">
+              <label>Filter Task Type</label>
+              <select id="filter-st-tasktype" onchange="renderSubTaskList()"><option value="">All</option></select>
+            </div>
+          </div>
+          <div id="list-subtasks" style="margin-top:.8rem"></div>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div class="master-panel card" id="master-users">
+        <div class="card-title">User Accounts</div>
+        <div class="master-info">
+          <strong>Admin controls:</strong> Reset a user's password, disable/enable their login access, or permanently delete their account. Password reset requests from users appear here with a 🔔 flag.
+        </div>
+        <div id="list-users"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA ARCHITECTURE
+// ═══════════════════════════════════════════════════════
+// SUPABASE CONFIG & IN-MEMORY CACHE
+// ═══════════════════════════════════════════════════════
+const SB_CONF_KEY = 'dtt_sb_config';
+
+function getSbConfig() {
+  try { return JSON.parse(localStorage.getItem(SB_CONF_KEY)); } catch(e) { return null; }
+}
+function persistSbConfig(c) { localStorage.setItem(SB_CONF_KEY, JSON.stringify(c)); }
+
+// In-memory cache (replaces localStorage)
+let SB_CACHE = { global: null, users: null };
+let _prevGlobal = null;
+
+// ── Supabase REST API helper ──
+async function sbApi(method, table, opts = {}) {
+  const c = getSbConfig();
+  if (!c) throw new Error('No Supabase config');
+  let url = c.url.replace(/\/$/, '') + '/rest/v1/' + table;
+  const params = new URLSearchParams();
+  if (opts.filter) Object.entries(opts.filter).forEach(([k,v]) => params.set(k, v));
+  const qs = params.toString();
+  if (qs) url += '?' + qs;
+
+  const headers = {
+    'apikey': c.key,
+    'Authorization': 'Bearer ' + c.key,
+    'Content-Type': 'application/json',
+  };
+  if (method === 'POST') headers['Prefer'] = opts.prefer || 'return=minimal';
+  if (method === 'DELETE') headers['Prefer'] = 'return=minimal';
+
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Supabase ${method} ${table}: ${txt}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+// ── Load all data from Supabase ──
+async function loadAllFromSupabase() {
+  const [entries, companies, taskTypes, subTasksRaw, acRaw, attRaw, users, dueDatesRaw] = await Promise.all([
+    sbApi('GET', 'entries?select=*&order=id.asc'),
+    sbApi('GET', 'companies?select=name'),
+    sbApi('GET', 'task_types?select=name'),
+    sbApi('GET', 'sub_tasks?select=*'),
+    sbApi('GET', 'auditor_companies?select=*'),
+    sbApi('GET', 'auditor_task_types?select=*'),
+    sbApi('GET', 'users?select=*'),
+    sbApi('GET', 'due_dates?select=*&order=due_date.asc').catch(() => [])
+  ]);
+
+  SB_CACHE.global = {
+    companies: companies.map(c => ({name: c.name, owner: c.owner || ''})),
+    taskTypes: taskTypes.map(t => ({name: t.name, owner: t.owner || ''})),
+    subTasks: subTasksRaw.map(s => ({company: s.company, taskType: s.task_type, name: s.name, owner: s.owner || ''})),
+    auditorCompany: acRaw.map(r => ({auditor: r.auditor, company: r.company})),
+    auditorTaskType: attRaw.map(r => ({auditor: r.auditor, company: r.company, taskType: r.task_type})),
+    entries: entries.map(e => ({
+      id: e.id, month: e.month, auditor: e.auditor, company: e.company,
+      tasktype: e.tasktype, task: e.task, manualTask: e.manual_task,
+      date: e.date, status: e.status, processOwner: e.process_owner,
+      critical: e.critical, discussion: e.discussion, impact: e.impact,
+      reportLink: e.report_link, remark: e.remark, createdBy: e.created_by
+    })),
+    dueDates: dueDatesRaw.map(d => ({
+      id: d.id, auditor: d.auditor, company: d.company,
+      taskType: d.task_type, dueDate: d.due_date, remark: d.remark || ''
+    })),
+    auditors: []
+  };
+
+  _prevGlobal = JSON.parse(JSON.stringify(SB_CACHE.global));
+  SB_CACHE.users = users.map(u => ({
+    username: u.username, password: u.password, name: u.name,
+    auditorName: u.auditor_name || u.name || u.username, role: u.role || 'auditor',
+    disabled: u.disabled, resetRequested: u.reset_requested, firm: u.firm || ''
+  }));
+}
+
+// ── getGlobal / saveGlobal ──
+function getGlobal() { return SB_CACHE.global; }
+// ── Track pending sync so logout can wait for it ──
+let _syncPromise = Promise.resolve();
+
+async function saveGlobal(g) {
+  const prev = _prevGlobal;
+  SB_CACHE.global = g;
+  _prevGlobal = JSON.parse(JSON.stringify(g));
+  showLoading('Saving…', 'Writing to database');
+  try {
+    await syncGlobalToSupabase(g, prev);
+    showToast('Saved ✓', 'success');
+  } catch(e) {
+    console.error('Supabase sync error:', e);
+    showToast('⚠ Sync error — check console', 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ── Delete helper: filter goes directly in URL (reliable) ──
+async function sbDelete(table, whereClause) {
+  const c = getSbConfig();
+  const url = c.url.replace(/\/$/, '') + '/rest/v1/' + table + '?' + whereClause;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'apikey': c.key,
+      'Authorization': 'Bearer ' + c.key,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    }
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(`DELETE ${table}: ${t}`); }
+}
+
+// ── Convert entry object → Supabase row ──
+function entryToRow(e) {
+  return {
+    id: e.id, month: e.month, auditor: e.auditor, company: e.company,
+    tasktype: e.tasktype, task: e.task, manual_task: e.manualTask,
+    date: e.date, status: e.status, process_owner: e.processOwner,
+    critical: e.critical, discussion: e.discussion, impact: e.impact,
+    report_link: e.reportLink, remark: e.remark, created_by: e.createdBy
+  };
+}
+
+// ── Sync global to Supabase — diff-based (no "delete all" patterns) ──
+async function syncGlobalToSupabase(g, prev) {
+  if (!prev) return;
+
+  // ── Entries: insert new, delete removed ──
+  const prevIds = new Set(prev.entries.map(e => e.id));
+  const currIds = new Set(g.entries.map(e => e.id));
+  for (const e of g.entries.filter(e => !prevIds.has(e.id))) {
+    await sbApi('POST', 'entries', { body: entryToRow(e) });
+  }
+  for (const id of prev.entries.filter(e => !currIds.has(e.id)).map(e => e.id)) {
+    await sbDelete('entries', 'id=eq.' + id);
+  }
+
+  // ── Companies (composite key name+owner): delete removed, insert added ──
+  const compKey = c => `${c.name}||${c.owner||''}`;
+  const prevC = new Set(prev.companies.map(compKey)), currC = new Set(g.companies.map(compKey));
+  for (const c of g.companies.filter(c => !prevC.has(compKey(c)))) {
+    try { await sbApi('POST', 'companies', { body: { name: c.name, owner: c.owner||'' } }); } catch(e){}
+  }
+  for (const c of prev.companies.filter(c => !currC.has(compKey(c)))) {
+    await sbDelete('companies', `name=eq.${encodeURIComponent(c.name)}&owner=eq.${encodeURIComponent(c.owner||'')}`);
+  }
+
+  // ── Task Types (composite key name+owner): delete removed, insert added ──
+  const ttKey = t => `${t.name}||${t.owner||''}`;
+  const prevT = new Set(prev.taskTypes.map(ttKey)), currT = new Set(g.taskTypes.map(ttKey));
+  for (const t of g.taskTypes.filter(t => !prevT.has(ttKey(t)))) {
+    try { await sbApi('POST', 'task_types', { body: { name: t.name, owner: t.owner||'' } }); } catch(e){}
+  }
+  for (const t of prev.taskTypes.filter(t => !currT.has(ttKey(t)))) {
+    await sbDelete('task_types', `name=eq.${encodeURIComponent(t.name)}&owner=eq.${encodeURIComponent(t.owner||'')}`);
+  }
+
+  // ── Sub Tasks: diff by (company + taskType + name + owner) ──
+  const stKey = s => `${s.company}||${s.taskType}||${s.name}||${s.owner||''}`;
+  const prevST = new Set(prev.subTasks.map(stKey)), currST = new Set(g.subTasks.map(stKey));
+  for (const s of g.subTasks.filter(s => !prevST.has(stKey(s)))) {
+    try { await sbApi('POST', 'sub_tasks', { body: { company:s.company, task_type:s.taskType, name:s.name, owner:s.owner||'' } }); } catch(e){}
+  }
+  for (const s of prev.subTasks.filter(s => !currST.has(stKey(s)))) {
+    await sbDelete('sub_tasks',
+      `company=eq.${encodeURIComponent(s.company)}&task_type=eq.${encodeURIComponent(s.taskType)}&name=eq.${encodeURIComponent(s.name)}&owner=eq.${encodeURIComponent(s.owner||'')}`);
+  }
+
+  // ── Auditor Companies: diff by (auditor + company) ──
+  const acKey = r => `${r.auditor}||${r.company}`;
+  const prevAC = new Set(prev.auditorCompany.map(acKey)), currAC = new Set(g.auditorCompany.map(acKey));
+  for (const r of g.auditorCompany.filter(r => !prevAC.has(acKey(r)))) {
+    try { await sbApi('POST', 'auditor_companies', { body: { auditor:r.auditor, company:r.company } }); } catch(e){}
+  }
+  for (const r of prev.auditorCompany.filter(r => !currAC.has(acKey(r)))) {
+    await sbDelete('auditor_companies',
+      `auditor=eq.${encodeURIComponent(r.auditor)}&company=eq.${encodeURIComponent(r.company)}`);
+  }
+
+  // ── Auditor Task Types: diff by (auditor + company + taskType) ──
+  const attKey = r => `${r.auditor}||${r.company}||${r.taskType}`;
+  const prevATT = new Set(prev.auditorTaskType.map(attKey)), currATT = new Set(g.auditorTaskType.map(attKey));
+  for (const r of g.auditorTaskType.filter(r => !prevATT.has(attKey(r)))) {
+    try { await sbApi('POST', 'auditor_task_types', { body: { auditor:r.auditor, company:r.company, task_type:r.taskType } }); } catch(e){}
+  }
+  for (const r of prev.auditorTaskType.filter(r => !currATT.has(attKey(r)))) {
+    await sbDelete('auditor_task_types',
+      `auditor=eq.${encodeURIComponent(r.auditor)}&company=eq.${encodeURIComponent(r.company)}&task_type=eq.${encodeURIComponent(r.taskType)}`);
+  }
+}
+
+// ── getUsers / saveUsers ──
+function getUsers() { return SB_CACHE.users || []; }
+async function saveUsers(u) {
+  SB_CACHE.users = u;
+  showLoading('Saving…', 'Writing to database');
+  try {
+    await syncUsersToSupabase(u);
+    showToast('Saved ✓', 'success');
+  } catch(e) {
+    console.error('User sync error:', e);
+    showToast('⚠ Sync error — check console', 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+async function syncUsersToSupabase(users) {
+  // Delete all users not in current list
+  const currentUsernames = users.map(u => u.username);
+  const existing = await sbApi('GET', 'users?select=username');
+  for (const eu of existing) {
+    if (!currentUsernames.includes(eu.username)) {
+      await sbApi('DELETE', 'users', { filter: { username: 'eq.' + eu.username } });
+    }
+  }
+  // Upsert all current users
+  if (users.length) {
+    await sbApi('POST', 'users', {
+      prefer: 'resolution=merge-duplicates,return=minimal',
+      body: users.map(u => ({
+        username: u.username, password: u.password, name: u.name,
+        auditor_name: u.auditorName, role: u.role || 'auditor',
+        disabled: !!u.disabled, reset_requested: !!u.resetRequested, firm: u.firm || ''
+      }))
+    });
+  }
+}
+
+// ── Config screen logic ──
+async function saveSbConfig() {
+  const url = document.getElementById('sb-url-input').value.trim();
+  const key = document.getElementById('sb-key-input').value.trim();
+  const msg = document.getElementById('sb-config-msg');
+  if (!url || !key) { msg.textContent = 'Both fields are required.'; msg.className = 'sb-config-msg error'; return; }
+  if (!url.includes('supabase.co')) { msg.textContent = 'URL should be a valid Supabase project URL.'; msg.className = 'sb-config-msg error'; return; }
+  msg.textContent = 'Testing connection…'; msg.className = 'sb-config-msg';
+  persistSbConfig({ url, key });
+  try {
+    await sbApi('GET', 'users?select=username&limit=1');
+    msg.textContent = '✓ Connected! Loading app…'; msg.className = 'sb-config-msg success';
+    setTimeout(() => startApp(), 800);
+  } catch(e) {
+    msg.textContent = 'Connection failed: ' + e.message.substring(0, 120);
+    msg.className = 'sb-config-msg error';
+    persistSbConfig(null);
+  }
+}
+
+function resetSbConfig() {
+  if (!confirm('Reset Supabase config? You will need to re-enter your credentials.')) return;
+  localStorage.removeItem(SB_CONF_KEY);
+  location.reload();
+}
+
+async function startApp() {
+  const c = getSbConfig();
+  if (!c) {
+    document.getElementById('sb-config-screen').style.display = 'flex';
+    return;
+  }
+  showLoading('Connecting to database…', 'Please wait');
+  try {
+    await loadAllFromSupabase();
+    const g = SB_CACHE.global;
+    // Seed default users if empty
+    if (!SB_CACHE.users.length) {
+      SB_CACHE.users = [
+        {username:'admin',password:'admin123',name:'Admin',auditorName:'admin',role:'admin',disabled:false,resetRequested:false},
+        {username:'jay',password:'jay123',name:'Jay',auditorName:'Jay',role:'auditor',disabled:false,resetRequested:false},
+        {username:'nikunj',password:'nikunj123',name:'Nikunj',auditorName:'Nikunj',role:'auditor',disabled:false,resetRequested:false},
+        {username:'khushboo',password:'khushboo123',name:'Khushboo',auditorName:'Khushboo',role:'auditor',disabled:false,resetRequested:false},
+      ];
+      await syncUsersToSupabase(SB_CACHE.users);
+    }
+    hideLoading();
+    // ── Auto-restore session on refresh ──
+    const savedUsername = localStorage.getItem('dtt_session');
+    if (savedUsername) {
+      const savedUser = SB_CACHE.users.find(u => u.username === savedUsername && !u.disabled);
+      if (savedUser) {
+        currentUser = savedUser;
+        initApp();
+        return;
+      } else {
+        // User was deleted or disabled — clear stale session
+        localStorage.removeItem('dtt_session');
+      }
+    }
+    document.getElementById('auth-screen').style.display = 'flex';
+  } catch(e) {
+    hideLoading();
+    alert('Failed to connect to Supabase:\n\n' + e.message + '\n\nPlease check your URL and API key.');
+    localStorage.removeItem(SB_CONF_KEY);
+    document.getElementById('sb-config-screen').style.display = 'flex';
+  }
+}
+
+function showLoading(msg = 'Loading…', sub = '') {
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading-sub').textContent = sub;
+  document.getElementById('loading-overlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.remove('show');
+}
+
+// ── Hardcoded Supabase credentials — config screen will never appear ──
+const HARDCODED_SB = {
+  url: 'https://adygelbbpxejvjrnosnf.supabase.co',
+  key: 'sb_publishable_5dEdYiTinDVlXAtgVgAIEg_Y9eMpeWw'
+};
+
+// ── Entry point: on page load ──
+window.addEventListener('load', () => {
+  persistSbConfig(HARDCODED_SB);
+  startApp();
+});
+
+let currentUser = null;
+
+// ─── PRIVACY: get companies for an auditor ───
+function getCompaniesForAuditor(auditorName) {
+  const g = getGlobal();
+  return [...new Set(g.auditorCompany.filter(r=>r.auditor===auditorName).map(r=>r.company))];
+}
+
+// ─── PRIVACY: get task types for auditor + company ───
+function getTaskTypesForAuditorCompany(auditorName, company) {
+  const g = getGlobal();
+  return [...new Set(g.auditorTaskType.filter(r=>r.auditor===auditorName && r.company===company).map(r=>r.taskType))];
+}
+
+// ─── PRIVACY: get sub tasks for company + taskType ───
+function getSubTasksForCompanyTaskType(company, taskType) {
+  return getMySubTasks().filter(s=>s.company===company && s.taskType===taskType).map(s=>s.name);
+}
+
+
+// Central privacy-aware entry getter — ALWAYS use this in reports
+function getVisibleEntries() {
+  const g = getGlobal();
+  if (!currentUser) return [];
+  if (currentUser.role === 'admin') return g.entries;
+  const myName = currentUser.auditorName || '';
+  if (!myName) return []; // No auditorName → show nothing rather than everything
+  return g.entries.filter(e => e.auditor === myName);
+}
+
+// Central privacy-aware due-dates getter
+function getVisibleDueDates() {
+  const g = getGlobal();
+  if (!currentUser) return [];
+  const dueDates = g.dueDates || [];
+  if (currentUser.role === 'admin') return dueDates;
+  const myName = (currentUser.auditorName || '').trim();
+  if (!myName) return [];
+  return dueDates.filter(d => d.auditor === myName);
+}
+
+// ── Per-user master data helpers ──
+// Returns company names visible to current user
+function getMyCompanies() {
+  const g = getGlobal();
+  if (!currentUser) return [];
+  if (currentUser.role === 'admin') return g.companies.map(c => c.name).sort((a,b)=>a.localeCompare(b));
+  const owner = (currentUser.auditorName || '').trim();
+  const names = new Set();
+  // Shared records (owner='') visible to all; own private records too
+  g.companies.filter(c => c.owner === '' || (owner && c.owner === owner)).forEach(c => names.add(c.name));
+  return [...names].sort((a,b)=>a.localeCompare(b));
+}
+
+// Returns task type names visible to current user
+function getMyTaskTypes() {
+  const g = getGlobal();
+  if (!currentUser) return [];
+  if (currentUser.role === 'admin') return g.taskTypes.map(t => t.name).sort((a,b)=>a.localeCompare(b));
+  const owner = (currentUser.auditorName || '').trim();
+  const names = new Set();
+  g.taskTypes.filter(t => t.owner === '' || (owner && t.owner === owner)).forEach(t => names.add(t.name));
+  return [...names].sort((a,b)=>a.localeCompare(b));
+}
+
+// Returns sub tasks visible to current user
+function getMySubTasks() {
+  const g = getGlobal();
+  if (!currentUser) return [];
+  if (currentUser.role === 'admin') return g.subTasks;
+  const owner = (currentUser.auditorName || '').trim();
+  return g.subTasks.filter(s => s.owner === '' || (owner && s.owner === owner)).sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+function getUserEntries() {
+  if (!currentUser) return [];
+  const g = getGlobal();
+  if (currentUser.role === 'admin') return g.entries;
+  const myName = currentUser.auditorName || '';
+  if (!myName) return []; // Safety: no auditorName → show nothing
+  return g.entries.filter(e => e.auditor === myName);
+}
+
+// ═══════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════
+function switchAuthTab(tab) {
+  // tabs: login | register | forgot
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-register').classList.toggle('active', tab==='register');
+  ['panel-login','panel-register','panel-forgot'].forEach(id=>{
+    document.getElementById(id).classList.remove('active');
+  });
+  const map={login:'panel-login',register:'panel-register',forgot:'panel-forgot'};
+  document.getElementById(map[tab]).classList.add('active');
+  // Clear messages on switch
+  ['login-msg','reg-msg','forgot-msg'].forEach(id=>{ const el=document.getElementById(id); if(el){el.textContent='';el.style.color='';} });
+}
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const msg = document.getElementById('login-msg');
+  const users = getUsers();
+  const user = users.find(x=>x.username===u && x.password===p);
+  if (!user) { msg.textContent='Invalid username or password.'; return; }
+  if (user.disabled) { msg.style.color='var(--red)'; msg.textContent='Your account has been disabled. Please contact the administrator.'; return; }
+  currentUser = user;
+  localStorage.setItem('dtt_session', user.username);
+  msg.textContent='';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  initApp();
+}
+
+function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const username = document.getElementById('reg-user').value.trim().toLowerCase();
+  const password = document.getElementById('reg-pass').value;
+  const msg = document.getElementById('reg-msg');
+  if (!name||!username||!password) { msg.textContent='All fields required.'; return; }
+  if (password.length < 4) { msg.textContent='Password must be at least 4 characters.'; return; }
+  const users = getUsers();
+  if (users.find(u=>u.username===username)) { msg.textContent='Username already taken.'; return; }
+  users.push({username, password, name, auditorName:name, role:'auditor', disabled:false, resetRequested:false});
+  saveUsers(users);
+  msg.style.color='var(--green)';
+  msg.textContent='Account created! An admin will assign your company access.';
+  setTimeout(()=>{ msg.textContent=''; msg.style.color=''; switchAuthTab('login'); document.getElementById('login-user').value=username; }, 2000);
+}
+
+// ── Forgot password: user submits a reset request ────────
+function doForgotPassword() {
+  const username = document.getElementById('forgot-user').value.trim().toLowerCase();
+  const msg = document.getElementById('forgot-msg');
+  if (!username) { msg.style.color='var(--red)'; msg.textContent='Please enter your username.'; return; }
+  const users = getUsers();
+  const idx = users.findIndex(u=>u.username===username);
+  if (idx === -1) { msg.style.color='var(--red)'; msg.textContent='Username not found. Please check and try again.'; return; }
+  if (users[idx].role==='admin') { msg.style.color='var(--red)'; msg.textContent='Contact your system administrator directly.'; return; }
+  users[idx].resetRequested = true;
+  saveUsers(users);
+  msg.style.color='var(--green)';
+  msg.textContent='Request sent! The admin will reset your password and let you know.';
+  document.getElementById('forgot-user').value='';
+}
+
+// ── Admin: open reset password modal ────────────────────
+let resetTargetUsername = null;
+function openResetModal(username) {
+  resetTargetUsername = username;
+  document.getElementById('reset-pw-for').textContent = 'Setting new password for: ' + username;
+  document.getElementById('reset-pw-input').value = '';
+  document.getElementById('reset-pw-msg').textContent = '';
+  document.getElementById('reset-pw-modal').style.display = 'flex';
+  setTimeout(()=>document.getElementById('reset-pw-input').focus(), 100);
+}
+function closeResetModal() {
+  document.getElementById('reset-pw-modal').style.display = 'none';
+  resetTargetUsername = null;
+}
+function confirmResetPassword() {
+  const newPw = document.getElementById('reset-pw-input').value.trim();
+  const msg = document.getElementById('reset-pw-msg');
+  if (!newPw || newPw.length < 4) { msg.style.color='var(--red)'; msg.textContent='Password must be at least 4 characters.'; return; }
+  const users = getUsers();
+  const idx = users.findIndex(u=>u.username===resetTargetUsername);
+  if (idx===-1) { msg.style.color='var(--red)'; msg.textContent='User not found.'; return; }
+  users[idx].password = newPw;
+  users[idx].resetRequested = false;
+  saveUsers(users);
+  closeResetModal();
+  renderUserList();
+  showToast('Password reset for ' + resetTargetUsername, 'success');
+}
+
+// ── Admin: toggle disable/enable user ───────────────────
+function toggleUserDisabled(username) {
+  const users = getUsers();
+  const idx = users.findIndex(u=>u.username===username);
+  if (idx===-1) return;
+  users[idx].disabled = !users[idx].disabled;
+  saveUsers(users);
+  renderUserList();
+  showToast(users[idx].disabled ? username+' disabled' : username+' re-enabled', 'success');
+}
+
+// ── Admin: permanently delete user ──────────────────────
+function deleteUser(username) {
+  if (!confirm('Permanently delete user "'+username+'"? This cannot be undone.')) return;
+  const users = getUsers().filter(u=>u.username!==username);
+  saveUsers(users);
+  renderUserList();
+  populateFilterDropdowns();
+  showToast('User '+username+' deleted', 'success');
+}
+
+function doLogout() {
+  currentUser = null;
+  localStorage.removeItem('dtt_session');
+  document.getElementById('app').style.display='none';
+  document.body.classList.remove('is-admin');
+  // Since saveGlobal now awaits Supabase before returning, data is
+  // already committed — just reload fresh data and show login screen
+  showLoading('Loading…', 'Please wait');
+  loadAllFromSupabase()
+    .then(() => {
+      hideLoading();
+      document.getElementById('auth-screen').style.display='flex';
+    })
+    .catch(() => {
+      hideLoading();
+      document.getElementById('auth-screen').style.display='flex';
+    });
+}
+
+// ═══════════════════════════════════════════════════════
+// APP INIT
+// ═══════════════════════════════════════════════════════
+function initApp() {
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.body.classList.toggle('is-admin', currentUser.role==='admin');
+  document.getElementById('sidebar-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+  document.getElementById('sidebar-username').textContent = currentUser.name;
+  document.getElementById('sidebar-role').textContent = currentUser.role==='admin'?'Administrator':'Auditor';
+  // Firm chip in sidebar
+  const sbFirmRow  = document.getElementById('sb-firm-row');
+  const sbFirmPill = document.getElementById('sb-firm-pill');
+  if (currentUser.role !== 'admin' && currentUser.firm) {
+    sbFirmPill.textContent = currentUser.firm;
+    sbFirmRow.style.display = 'flex';
+  } else { sbFirmRow.style.display = 'none'; }
+  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  // Populate last 12 months dropdown
+  populateMonthDropdown();
+  const now = new Date();
+  document.getElementById('f-date').value = now.toISOString().split('T')[0];
+  initFormAuditorDropdown();
+  populateFilterDropdowns();
+  populateMasterSelects();
+  initAttachPanel();
+  showPage('dashboard');
+  // Show Drive sign-in modal after a short delay
+  setTimeout(() => {
+    // Render the "Sign in with Google" button inside modal
+    const signinBtn = document.getElementById('g-signin-btn');
+    if (signinBtn && !driveSignedIn) {
+      signinBtn.innerHTML = `
+        <button onclick="handleGoogleSignIn()" style="
+          display:flex;align-items:center;gap:.55rem;padding:.65rem 1.3rem;
+          background:#fff;border:1.5px solid #dadce0;border-radius:8px;
+          font-family:'Inter',sans-serif;font-size:.88rem;font-weight:600;color:#3c4043;
+          cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12);width:100%;justify-content:center">
+          <svg width="18" height="18" viewBox="0 0 18 18">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+          Sign in with Google
+        </button>`;
+    }
+    showDriveModalOnLogin();
+  }, 700);
+}
+
+// ─── FORM: Auditor dropdown ───
+// Populate last 12 months as a selectable dropdown
+function populateMonthDropdown() {
+  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const sel = document.getElementById('f-month');
+  if (!sel) return;
+  const now = new Date();
+  const opts = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = monthNames[d.getMonth()] + '-' + d.getFullYear();
+    opts.push(`<option value="${label}"${i===0?' selected':''}>${label}</option>`);
+  }
+  sel.innerHTML = opts.join('');
+}
+
+function initFormAuditorDropdown() {
+  const g = getGlobal();
+  const s = document.getElementById('f-auditor');
+  if (currentUser.role === 'admin') {
+    const auditors = getUsers()
+      .filter(u => u.role !== 'admin' && !u.disabled && u.auditorName)
+      .map(u => u.auditorName);
+    s.innerHTML = '<option value="">Select Auditor…</option>' + auditors.map(a=>`<option>${a}</option>`).join('');
+    s.disabled = false;
+  } else {
+    s.innerHTML = `<option value="${currentUser.auditorName}">${currentUser.auditorName}</option>`;
+    s.disabled = true;
+  }
+  // Always populate all companies directly — no assignment filter
+  populateAllCompanies();
+}
+
+// ─── Show ALL companies (no assignment filter) ───
+function populateAllCompanies() {
+  const g = getGlobal();
+  const compSel = document.getElementById('f-company');
+  compSel.innerHTML = '<option value="">Select Company…</option>' + getMyCompanies().map(c=>`<option>${c}</option>`).join('');
+  compSel.disabled = false;
+  // Reset downstream
+  const ttSel = document.getElementById('f-tasktype');
+  ttSel.innerHTML = '<option value="">Select Task Type…</option>';
+  ttSel.disabled = false;
+  const taskSel = document.getElementById('f-task');
+  taskSel.innerHTML = '<option value="">Select Sub Task…</option>';
+  taskSel.disabled = true;
+}
+
+// ─── CASCADE: Auditor change — just re-populate companies (all) ───
+function onAuditorChange() {
+  populateAllCompanies();
+}
+
+// ─── CASCADE: Company → Task Type (show all task types for that company) ───
+function onCompanyChange() {
+  const g = getGlobal();
+  const company = document.getElementById('f-company').value;
+  const ttSel = document.getElementById('f-tasktype');
+  const taskSel = document.getElementById('f-task');
+  ttSel.innerHTML = '<option value="">Select Task Type…</option>';
+  taskSel.innerHTML = '<option value="">Select Sub Task…</option>';
+  taskSel.disabled = true;
+  if (!company) { ttSel.disabled = false; return; }
+  // Get all task types that have sub-tasks for this company
+  const taskTypes = [...new Set(getMySubTasks().filter(s=>s.company===company).map(s=>s.taskType))].sort((a,b)=>a.localeCompare(b));
+  if (!taskTypes.length) {
+    // Fall back to all task types if no sub-tasks configured
+    ttSel.innerHTML = '<option value="">Select Task Type…</option>' + getMyTaskTypes().map(t=>`<option>${t}</option>`).join('');
+  } else {
+    ttSel.innerHTML = '<option value="">Select Task Type…</option>' + taskTypes.map(t=>`<option>${t}</option>`).join('');
+  }
+  ttSel.disabled = false;
+}
+
+// ─── CASCADE: Task Type → Sub Task ───
+function onTaskTypeChange() {
+  const company = document.getElementById('f-company').value;
+  const taskType = document.getElementById('f-tasktype').value;
+  const taskSel = document.getElementById('f-task');
+  taskSel.disabled = true;
+  if (!taskType) { taskSel.innerHTML = '<option value="">Select Sub Task…</option>'; return; }
+  const subTasks = getSubTasksForCompanyTaskType(company, taskType);
+  if (!subTasks.length) {
+    taskSel.innerHTML = '<option value="">No sub-tasks for this type</option>';
+  } else {
+    taskSel.innerHTML = `<option value="">Select Sub Task…</option>` + subTasks.map(t=>`<option>${t}</option>`).join('');
+    taskSel.disabled = false;
+  }
+}
+
+function resetSelect(id) {
+  const s = document.getElementById(id);
+  s.innerHTML = '<option value="">Select…</option>';
+  s.disabled = true;
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+const pageTitles={dashboard:'Dashboard',form:'New Entry',database:'Database',summary:'Task Summary',daily:'Daily Report',calendar:'Calendar',master:'Master Data',dueDateForm:'Due Date Form',dueDateReport:'Due Date Report',visualReports:'Visual Reports'};
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  // Highlight matching nav item
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    const txt = n.textContent.trim().toLowerCase();
+    if((id==='dashboard'&&txt.includes('dashboard'))||(id==='form'&&txt.includes('new'))||(id==='database'&&txt.includes('database'))||
+       (id==='summary'&&txt.includes('summary'))||(id==='daily'&&txt.includes('daily'))||(id==='calendar'&&txt.includes('calendar'))||(id==='master'&&txt.includes('master'))||(id==='dueDateForm'&&txt.includes('due date f'))||(id==='dueDateReport'&&txt.includes('due date r'))||(id==='visualReports'&&txt.includes('visual')))
+      n.classList.add('active');
+  });
+  document.getElementById('page-title').textContent = pageTitles[id];
+  closeSidebar();
+  if(id==='dashboard') renderDashboard();
+  if(id==='database') renderDatabase();
+  if(id==='summary') renderSummary();
+  if(id==='daily') renderDaily();
+  if(id==='calendar') renderCalendar();
+  if(id==='visualReports') initVisualReports();
+  if(id==='dueDateForm') initDueDateForm();
+  if(id==='dueDateReport') initDueDateReport();
+  if(id==='master') {
+    // Default tab: Company→Task→Sub Task for all
+    const defaultTab = 'subtasks';
+    document.querySelectorAll('.master-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.master-panel').forEach(p => { if(!p.style.display) p.classList.remove('active'); });
+    const tabMap = {'subtasks':0,'users':1};
+    document.querySelectorAll('.master-tab')[tabMap[defaultTab]]?.classList.add('active');
+    document.getElementById('master-'+defaultTab).classList.add('active');
+    renderAllMasterLists(); populateMasterSelects();
+  }
+}
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════
+// GOOGLE DRIVE — SIGN-IN MODAL + GAS UPLOAD + FILE CHIPS
+// ═══════════════════════════════════════════════════════
+const DRIVE_FOLDER_URL = 'https://drive.google.com/drive/u/0/folders/1m-fxYjd7HefWCV13RCBAXCmciHN41Dp9';
+const GAS_URL_KEY      = 'dtt_gas_url_v2';   // admin-saved GAS Web App URL
+const DRIVE_SKIP_KEY   = 'dtt_drive_skipped'; // user chose to skip this session
+
+let attachedFiles  = [];   // [{ name, url }]
+let driveSignedIn  = false;
+
+// ─── GAS URL (admin-configurable) ───────────────────────
+function getGasUrl()  { return localStorage.getItem(GAS_URL_KEY) || ''; }
+function saveGasUrl() {
+  const url = document.getElementById('gas-url-input').value.trim();
+  if (!url.startsWith('https://script.google.com')) {
+    document.getElementById('gas-url-status').style.color = 'var(--red)';
+    document.getElementById('gas-url-status').textContent = '⚠ Must be a script.google.com URL';
+    return;
+  }
+  localStorage.setItem(GAS_URL_KEY, url);
+  document.getElementById('gas-url-status').style.color = 'var(--green)';
+  document.getElementById('gas-url-status').textContent  = '✓ Saved';
+  setTimeout(() => document.getElementById('gas-url-status').textContent = '', 3000);
+}
+
+// ─── Show admin GAS setup panel only for admin ───────────
+function initAttachPanel() {
+  if (currentUser && currentUser.role === 'admin') {
+    const setup = document.getElementById('gas-admin-setup');
+    if (setup) {
+      setup.style.display = 'block';
+      const saved = getGasUrl();
+      if (saved) {
+        document.getElementById('gas-url-input').value = saved;
+        document.getElementById('gas-url-status').style.color = 'var(--green)';
+        document.getElementById('gas-url-status').textContent  = '✓ Configured';
+      }
+    }
+  }
+}
+
+// ─── Show Drive sign-in modal on login ───────────────────
+function showDriveModalOnLogin() {
+  // Only show if GAS URL is configured — otherwise upload is not possible
+  if (!getGasUrl()) return;
+  // Don't re-show if already signed in this session
+  if (driveSignedIn) return;
+  document.getElementById('drive-modal').style.display = 'flex';
+}
+
+// ─── User clicks "Sign in with Google" (rendered as styled button) ─
+function handleGoogleSignIn() {
+  // Open Google account chooser in a small popup
+  const w = 500, h = 600;
+  const left = window.screenX + (window.outerWidth  - w) / 2;
+  const top  = window.screenY + (window.outerHeight - h) / 2;
+  const popup = window.open(
+    'https://accounts.google.com/AccountChooser?continue=' +
+      encodeURIComponent('https://drive.google.com/drive/u/0/folders/1m-fxYjd7HefWCV13RCBAXCmciHN41Dp9'),
+    'google_signin',
+    `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
+  );
+
+  // Show "I have signed in" confirmation button after popup opens
+  const statusEl = document.getElementById('drive-modal-status');
+  const signinBtn = document.getElementById('g-signin-btn');
+  statusEl.textContent = '⏳ Sign in to Google in the popup window, then click below.';
+
+  signinBtn.innerHTML = `
+    <button onclick="confirmGoogleSignIn()" style="
+      display:flex;align-items:center;gap:.55rem;padding:.65rem 1.3rem;
+      background:#fff;border:1.5px solid #dadce0;border-radius:8px;
+      font-family:'Inter',sans-serif;font-size:.88rem;font-weight:600;color:#3c4043;
+      cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:box-shadow .2s;width:100%;justify-content:center">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+      ✓ Done — I have signed in to Google
+    </button>`;
+}
+
+function confirmGoogleSignIn() {
+  driveSignedIn = true;
+  document.getElementById('drive-signed-in').style.display = 'block';
+  document.getElementById('drive-user-email').textContent  = 'Google account connected — uploads will go to your shared Task Tracker folder.';
+  document.getElementById('drive-modal-status').textContent = '';
+  document.getElementById('g-signin-btn').style.display    = 'none';
+  document.getElementById('btn-drive-continue').style.display = 'block';
+
+  // Update chip in form
+  const chip = document.getElementById('drive-signin-chip');
+  if (chip) {
+    chip.style.display = 'inline-flex';
+    chip.innerHTML = '<span class="drive-access-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:11px;height:11px"><polyline points="20 6 9 17 4 12"/></svg>Drive connected</span>';
+  }
+}
+
+function closeDriveModal()   { document.getElementById('drive-modal').style.display = 'none'; }
+function dismissDriveModal() {
+  localStorage.setItem(DRIVE_SKIP_KEY, '1');
+  document.getElementById('drive-modal').style.display = 'none';
+}
+
+// ─── Trigger file input ───────────────────────────────────
+function triggerFileUpload() {
+  const gasUrl = getGasUrl();
+  if (!gasUrl) {
+    showToast('File upload not configured. Ask your admin to set up the GAS URL.', 'error');
+    return;
+  }
+  document.getElementById('file-input-real').click();
+}
+
+// ─── Read file → base64 → POST to GAS → get Drive URL ────
+function uploadFileToDriveViaGAS(input) {
+  if (!input.files || !input.files[0]) return;
+  const file    = input.files[0];
+  const gasUrl  = getGasUrl();
+  const statusEl = document.getElementById('attach-request-status');
+  const btn      = document.getElementById('btn-attach-file');
+
+  btn.disabled = true;
+  statusEl.className = 'attach-request-status pending';
+  statusEl.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      style="width:13px;height:13px;animation:spin 1s linear infinite;flex-shrink:0">
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+    </svg>
+    Uploading <strong>${file.name}</strong> to Google Drive…`;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const fileData = e.target.result; // data:mime;base64,...
+
+    fetch(gasUrl, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body:    JSON.stringify({ fileData, fileName: file.name })
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      input.value  = '';
+      if (data.fileUrl) {
+        // Success — add chip and fill Report Link
+        attachedFiles.push({ name: file.name, url: data.fileUrl });
+        renderAttachedFilesList();
+        syncReportLink();
+        statusEl.className = 'attach-request-status granted';
+        statusEl.innerHTML = `✓ <strong>${file.name}</strong> uploaded — link saved to Report Link.`;
+        showToast('File uploaded to Drive! ✓', 'success');
+      } else {
+        statusEl.className = 'attach-request-status denied';
+        statusEl.textContent = '✕ Upload failed: ' + (data.error || 'Unknown error from GAS');
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      input.value  = '';
+      statusEl.className = 'attach-request-status denied';
+      statusEl.textContent = '✕ Network error — could not reach upload service.';
+    });
+  };
+  reader.onerror = () => {
+    btn.disabled = false;
+    statusEl.className = 'attach-request-status denied';
+    statusEl.textContent = '✕ Could not read file.';
+  };
+  reader.readAsDataURL(file);
+}
+
+// Spin keyframe for upload spinner
+(function(){ const s=document.createElement('style'); s.textContent='@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}'; document.head.appendChild(s); })();
+
+// ─── File list rendering ──────────────────────────────────
+function removeAttachedFile(idx) {
+  attachedFiles.splice(idx, 1);
+  renderAttachedFilesList();
+  syncReportLink();
+  const s = document.getElementById('attach-request-status');
+  s.textContent = ''; s.className = 'attach-request-status';
+}
+
+function syncReportLink() {
+  const el = document.getElementById('f-reportlink');
+  if (el) el.value = attachedFiles.map(f => f.url).join(', ');
+}
+
+function renderAttachedFilesList() {
+  const list = document.getElementById('attach-files-list');
+  if (!list) return;
+  if (!attachedFiles.length) {
+    list.innerHTML = '<span class="attach-empty">No files attached yet.</span>';
+    return;
+  }
+  list.innerHTML = attachedFiles.map((f, i) => `
+    <div class="attach-file-item">
+      <div class="attach-file-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+      </div>
+      <span class="attach-file-name" title="${f.url}">${f.name}</span>
+      <span style="font-size:.68rem;background:#e8f5e9;color:#1b5e20;font-weight:700;padding:.1rem .4rem;border-radius:8px;flex-shrink:0">Drive</span>
+      <a href="${f.url}" target="_blank" class="attach-file-link">Open ↗</a>
+      <button class="attach-file-del" onclick="removeAttachedFile(${i})" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+function clearAttachments() {
+  attachedFiles = [];
+  renderAttachedFilesList();
+  const s = document.getElementById('attach-request-status');
+  if (s) { s.textContent = ''; s.className = 'attach-request-status'; }
+}
+
+function clearForm() {
+  const now = new Date();
+  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Reset month dropdown to current month
+  const curMonth = monthNames[now.getMonth()]+'-'+now.getFullYear();
+  const mSel = document.getElementById('f-month');
+  if (mSel) { for(const o of mSel.options) { if(o.value===curMonth){o.selected=true;break;} } }
+  document.getElementById('f-date').value=now.toISOString().split('T')[0];
+  ['f-processowner','f-discussion','f-impact','f-reportlink','f-remark','f-manual'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-critical').selectedIndex=0;
+  document.getElementById('f-status').selectedIndex=0;
+  clearAttachments();
+  initFormAuditorDropdown();
+}
+
+function saveEntry() {
+  const gv = id=>document.getElementById(id).value.trim();
+  const req = {'f-auditor':'Auditor','f-company':'Company','f-tasktype':'Task Type','f-date':'Date','f-status':'Status'};
+  for(const [id,label] of Object.entries(req)){
+    if(!document.getElementById(id).value){showToast(label+' is required','error');return;}
+  }
+  // Sub Task is optional — user may fill Manually Task instead
+  const gl = getGlobal();
+  // Build report link from attached files list, or fall back to manually typed value
+  const fileLink = attachedFiles.length
+    ? attachedFiles.map(f => f.url).join(', ')
+    : gv('f-reportlink');
+  const entry = {
+    id:Date.now(),
+    month:document.getElementById('f-month').value,
+    auditor:document.getElementById('f-auditor').value,
+    company:document.getElementById('f-company').value,
+    tasktype:document.getElementById('f-tasktype').value,
+    task:gv('f-task')||gv('f-manual'),
+    manualTask:gv('f-manual'),
+    date:gv('f-date'),
+    status:document.getElementById('f-status').value,
+    processOwner:gv('f-processowner'),
+    critical:document.getElementById('f-critical').value,
+    discussion:gv('f-discussion'),
+    impact:gv('f-impact'),
+    reportLink: fileLink,
+    remark:gv('f-remark'),
+    createdBy:currentUser.username
+  };
+  gl.entries.push(entry);
+  saveGlobal(gl);
+  showToast('Entry saved successfully!','success');
+  clearForm();
+}
+
+// ═══════════════════════════════════════════════════════
+// POPULATE FILTER DROPDOWNS
+// ═══════════════════════════════════════════════════════
+function populateFilterDropdowns() {
+  const g = getGlobal();
+  // ── Live auditor names from user accounts (not g.auditors) ──
+  const liveAuditors = getUsers()
+    .filter(u => u.role !== 'admin' && !u.disabled && u.auditorName)
+    .map(u => u.auditorName);
+
+  const addOpts = (id, arr, allLabel='All') => {
+    const s = document.getElementById(id); if (!s) return;
+    const cur = s.value;
+    s.innerHTML = `<option value="">${allLabel}</option>` + arr.map(v=>`<option>${v}</option>`).join('');
+    if (cur) for (const o of s.options) if (o.value===cur){o.selected=true;break;}
+  };
+
+  // Database filters — built from actual entry values
+  const visE = getVisibleEntries();
+  const months   = [...new Set(visE.map(e=>e.month))].filter(Boolean);
+  const companies= [...new Set(visE.map(e=>e.company))].filter(Boolean);
+  const taskTypes= [...new Set(visE.map(e=>e.tasktype))].filter(Boolean);
+  addOpts('db-month',   months.length   ? months    : []);
+  addOpts('db-company', companies.length ? companies : getMyCompanies());
+  addOpts('db-tasktype',taskTypes.length ? taskTypes : getMyTaskTypes());
+
+  // Summary filters
+  const sumC = document.getElementById('sum-company');
+  const sumM = document.getElementById('sum-month');
+  const sumT = document.getElementById('sum-task');
+  if (sumC) sumC.innerHTML = getMyCompanies().map(v=>`<option>${v}</option>`).join('');
+  if (sumT) sumT.innerHTML = getMyTaskTypes().map(v=>`<option>${v}</option>`).join('');
+  if (sumM) {
+    const now = new Date();
+    const mn  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const cur = mn[now.getMonth()]+'-'+now.getFullYear();
+    const all = [...new Set([...getVisibleEntries().map(e=>e.month).filter(Boolean), cur])];
+    sumM.innerHTML = all.map(v=>`<option${v===cur?' selected':''}>${v}</option>`).join('');
+  }
+
+  // Calendar filters — person list from live users
+  const mn2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const now  = new Date();
+  const calM = document.getElementById('cal-month');
+  if (calM) calM.innerHTML = mn2.map((m,i)=>`<option value="${i}"${i===now.getMonth()?' selected':''}>${m}</option>`).join('');
+  const calY = document.getElementById('cal-year');
+  if (calY) calY.innerHTML = [now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1].map(y=>`<option${y===now.getFullYear()?' selected':''}>${y}</option>`).join('');
+  addOpts('cal-person',    liveAuditors);
+  addOpts('cal-company-f', getMyCompanies());
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDashboard() {
+  const entries=getUserEntries();
+  const today=new Date().toISOString().split('T')[0];
+  const todayE=entries.filter(e=>e.date===today);
+  const completed=entries.filter(e=>e.status==='Completed').length;
+  const inProgress=entries.filter(e=>e.status==='In Progress').length;
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card green"><div class="stat-label">Total Entries</div><div class="stat-value">${entries.length}</div><div class="stat-sub">All time</div></div>
+    <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value">${completed}</div><div class="stat-sub">${entries.length?Math.round(completed/entries.length*100):0}% of total</div></div>
+    <div class="stat-card amber"><div class="stat-label">In Progress</div><div class="stat-value">${inProgress}</div><div class="stat-sub">Active tasks</div></div>
+    <div class="stat-card red"><div class="stat-label">Today's Entries</div><div class="stat-value">${todayE.length}</div><div class="stat-sub">${new Date().toLocaleDateString('en-GB')}</div></div>
+  `;
+  const recent=entries.slice(-10).reverse();
+  document.getElementById('dash-recent').innerHTML=recent.length?renderTable(
+    ['Date','Auditor','Company','Task Type','Sub Task','Status'],
+    recent.map(e=>[fmtDate(e.date),e.auditor,e.company,e.tasktype,e.task,badge(e.status)])
+  ):emptyState('No entries yet. Add your first task entry!');
+}
+
+// ═══════════════════════════════════════════════════════
+// DATABASE
+// ═══════════════════════════════════════════════════════
+function renderDatabase() {
+  let entries=getUserEntries();
+  const month=document.getElementById('db-month').value;
+  const company=document.getElementById('db-company').value;
+  const tasktype=document.getElementById('db-tasktype').value;
+  const status=document.getElementById('db-status').value;
+  if(month) entries=entries.filter(e=>e.month===month);
+  if(company) entries=entries.filter(e=>e.company===company);
+  if(tasktype) entries=entries.filter(e=>e.tasktype===tasktype);
+  if(status) entries=entries.filter(e=>e.status===status);
+  entries=entries.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('db-count').textContent=entries.length+' records';
+  const isAdmin = currentUser.role === 'admin';
+
+  const editSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`;
+  const delSvg  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>`;
+
+  const headers = isAdmin
+    ? ['Date','Month','Firm','Auditor','Company','Task Type','Sub Task','Status','Critical','Discussion','Impact','File Link','Remark','']
+    : ['Date','Month','Auditor','Company','Task Type','Sub Task','Status','Critical','Discussion','Impact','File Link','Remark',''];
+
+  const rows = entries.map(e => {
+    const linkCell = e.reportLink ? (e.reportLink.startsWith('http')
+      ? `<a href="${e.reportLink}" class="drive-link-chip" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Open</a>`
+      : `<span style="font-size:.75rem;color:var(--muted)">${e.reportLink}</span>`) : '—';
+
+    const actionCell = `<div class="action-btns">
+      <button class="btn-edit" title="Edit" onclick="openEditModal(${e.id})">${editSvg}</button>
+      <button class="btn-del"  title="Delete" onclick="deleteEntry(${e.id})">${delSvg}</button>
+    </div>`;
+
+    const base = [fmtDate(e.date),e.month,e.auditor,e.company,e.tasktype,e.task||e.manualTask||'—',badge(e.status),
+      e.critical||'—',e.discussion||'—',e.impact||'—',linkCell,e.remark||'—',actionCell];
+    return isAdmin
+      ? [fmtDate(e.date),e.month,firmTag(firmForAuditor(e.auditor))||'—',e.auditor,e.company,e.tasktype,e.task||e.manualTask||'—',badge(e.status),e.critical||'—',e.discussion||'—',e.impact||'—',linkCell,e.remark||'—',actionCell]
+      : base;
+  });
+  document.getElementById('db-table').innerHTML=entries.length?renderTable(headers,rows):emptyState('No records found.');
+}
+
+// ═══════════════════════════════════════════════════════
+// ENTRY EDIT & DELETE
+// ═══════════════════════════════════════════════════════
+let _editingEntryId = null;
+
+function openEditModal(entryId) {
+  const g = getGlobal();
+  const e = g.entries.find(x => x.id === entryId);
+  if (!e) return;
+  _editingEntryId = entryId;
+
+  // Populate month dropdown
+  const monthSel = document.getElementById('em-month');
+  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now = new Date();
+  const opts = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = monthNames[d.getMonth()] + '-' + d.getFullYear();
+    opts.push(`<option value="${label}">${label}</option>`);
+  }
+  // Also add current entry month if not in last 12
+  if (!opts.some(o => o.includes(`"${e.month}"`))) {
+    opts.push(`<option value="${e.month}">${e.month}</option>`);
+  }
+  monthSel.innerHTML = opts.join('');
+  monthSel.value = e.month;
+
+  // Populate auditor
+  const audSel = document.getElementById('em-auditor');
+  if (currentUser.role === 'admin') {
+    const auditors = getUsers().filter(u => u.role !== 'admin' && !u.disabled && u.auditorName).map(u => u.auditorName);
+    audSel.innerHTML = auditors.map(a => `<option>${a}</option>`).join('');
+  } else {
+    audSel.innerHTML = `<option>${currentUser.auditorName}</option>`;
+    audSel.disabled = true;
+  }
+  audSel.value = e.auditor;
+
+  // Populate company
+  const compSel = document.getElementById('em-company');
+  compSel.innerHTML = getMyCompanies().map(c => `<option>${c}</option>`).join('');
+  if (!getMyCompanies().includes(e.company)) {
+    compSel.innerHTML += `<option>${e.company}</option>`;
+  }
+  compSel.value = e.company;
+
+  // Populate task type
+  const ttSel = document.getElementById('em-tasktype');
+  ttSel.innerHTML = getMyTaskTypes().map(t => `<option>${t}</option>`).join('');
+  if (!getMyTaskTypes().includes(e.tasktype)) {
+    ttSel.innerHTML += `<option>${e.tasktype}</option>`;
+  }
+  ttSel.value = e.tasktype;
+
+  // Populate sub task
+  const taskSel = document.getElementById('em-task');
+  const subTasks = getSubTasksForCompanyTaskType(e.company, e.tasktype);
+  taskSel.innerHTML = '<option value="">Select…</option>' + subTasks.map(s => `<option>${s}</option>`).join('');
+  if (e.task && !subTasks.includes(e.task)) taskSel.innerHTML += `<option>${e.task}</option>`;
+  taskSel.value = e.task || '';
+
+  // Fill remaining fields
+  document.getElementById('em-date').value        = e.date || '';
+  document.getElementById('em-status').value      = e.status || '';
+  document.getElementById('em-critical').value    = e.critical || '';
+  document.getElementById('em-processowner').value= e.processOwner || '';
+  document.getElementById('em-discussion').value  = e.discussion || '';
+  document.getElementById('em-impact').value      = e.impact || '';
+  document.getElementById('em-reportlink').value  = e.reportLink || '';
+  document.getElementById('em-remark').value      = e.remark || '';
+  document.getElementById('em-manual').value      = e.manualTask || '';
+
+  document.getElementById('entry-modal-overlay').style.display = 'flex';
+}
+
+function closeEntryModal() {
+  document.getElementById('entry-modal-overlay').style.display = 'none';
+  _editingEntryId = null;
+  document.getElementById('em-auditor').disabled = false;
+}
+
+async function saveEditedEntry() {
+  if (!_editingEntryId) return;
+  const gv = id => document.getElementById(id).value.trim();
+  const req = {'em-auditor':'Auditor','em-company':'Company','em-tasktype':'Task Type','em-date':'Date','em-status':'Status'};
+  for (const [id, label] of Object.entries(req)) {
+    if (!document.getElementById(id).value) { showToast(label + ' is required', 'error'); return; }
+  }
+  const g = getGlobal();
+  const idx = g.entries.findIndex(x => x.id === _editingEntryId);
+  if (idx === -1) return;
+
+  // Update the entry in place — preserve id and createdBy
+  g.entries[idx] = {
+    ...g.entries[idx],
+    month:        document.getElementById('em-month').value,
+    auditor:      document.getElementById('em-auditor').value,
+    company:      document.getElementById('em-company').value,
+    tasktype:     document.getElementById('em-tasktype').value,
+    task:         gv('em-task') || gv('em-manual'),
+    manualTask:   gv('em-manual'),
+    date:         gv('em-date'),
+    status:       document.getElementById('em-status').value,
+    critical:     document.getElementById('em-critical').value,
+    processOwner: gv('em-processowner'),
+    discussion:   gv('em-discussion'),
+    impact:       gv('em-impact'),
+    reportLink:   gv('em-reportlink'),
+    remark:       gv('em-remark'),
+  };
+
+  closeEntryModal();
+  await saveGlobal(g);
+  showToast('Entry updated ✓', 'success');
+  renderDatabase();
+}
+
+async function deleteEntry(entryId) {
+  if (!confirm('Delete this entry? This cannot be undone.')) return;
+  const g = getGlobal();
+  const idx = g.entries.findIndex(x => x.id === entryId);
+  if (idx === -1) return;
+  g.entries.splice(idx, 1);
+  await saveGlobal(g);
+  showToast('Entry deleted ✓', 'success');
+  renderDatabase();
+}
+
+// ═══════════════════════════════════════════════════════
+// SUMMARY
+// ═══════════════════════════════════════════════════════
+function renderSummary() {
+  const g=getGlobal();
+  const isAdmin = currentUser.role === 'admin';
+  // Show firm filter for admin only
+  const fg = document.getElementById('sum-firm-group');
+  if (fg) fg.style.display = isAdmin ? 'block' : 'none';
+  const fFirm = isAdmin ? (document.getElementById('sum-firm')?.value || '') : '';
+  const firmAuditorSet = fFirm ? new Set(getUsers().filter(u=>u.firm===fFirm&&u.auditorName).map(u=>u.auditorName)) : null;
+
+  const company=document.getElementById('sum-company').value;
+  const month=document.getElementById('sum-month').value;
+  const detailTask=document.getElementById('sum-task').value;
+  let entries=getVisibleEntries().filter(e=>e.company===company&&e.month===month);
+  if (firmAuditorSet) entries = entries.filter(e => firmAuditorSet.has(e.auditor));
+  const leftEl=document.getElementById('summary-left');
+  const taskTypes=[...new Set(entries.map(e=>e.tasktype))];
+  if(!taskTypes.length){leftEl.innerHTML='<p style="color:var(--muted);font-size:.85rem">No data for selected filters.</p>';}
+  else {
+    leftEl.innerHTML=taskTypes.map(tt=>{
+      const te=entries.filter(e=>e.tasktype===tt);
+      const done=te.filter(e=>e.status==='Completed').length;
+      const pct=te.length?Math.round(done/te.length*100):0;
+      const sl=pct===100?'Completed':pct>0?'In Progress':'Not Working';
+      return `<div class="task-row"><div style="flex:1"><div class="task-name">${tt}</div><div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div><div class="task-count">${done}/${te.length} — ${pct}%</div></div><div style="margin-left:.5rem">${badge(sl)}</div></div>`;
+    }).join('');
+  }
+  const rightEntries=entries.filter(e=>e.tasktype===detailTask);
+  document.getElementById('summary-right').innerHTML=rightEntries.length?renderTable(
+    ['Task Type','Sub Task','Status','Report Link'],
+    rightEntries.map(e=>[e.tasktype,e.task||e.manualTask,badge(e.status),e.reportLink?`<a href="${e.reportLink}" style="color:var(--blue);font-size:.78rem" target="_blank">Link</a>`:'—'])
+  ):`<p style="color:var(--muted);font-size:.85rem;padding:.5rem">No data for "${detailTask}" under ${company} / ${month}.</p>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// DAILY REPORT
+// ═══════════════════════════════════════════════════════
+function renderDaily() {
+  const g = getGlobal();
+  const isAdmin = currentUser.role === 'admin';
+
+  // Always show filter bar; show firm filter for admin only
+  const dailyFirmBar = document.getElementById('daily-firm-bar');
+  if (dailyFirmBar) dailyFirmBar.style.display = 'flex';
+  const firmGrp = document.getElementById('daily-firm-group');
+  if (firmGrp) firmGrp.style.display = isAdmin ? 'block' : 'none';
+
+  // Date filter — default to today
+  const dateFilterEl = document.getElementById('daily-date-filter');
+  const todayStr = new Date().toISOString().split('T')[0];
+  if (dateFilterEl && !dateFilterEl.value) dateFilterEl.value = todayStr;
+  const selectedDate = dateFilterEl ? dateFilterEl.value : todayStr;
+
+  const fFirm = isAdmin ? (document.getElementById('daily-firm')?.value || '') : '';
+  const firmAuditorSet = fFirm ? new Set(getUsers().filter(u=>u.firm===fFirm&&u.auditorName).map(u=>u.auditorName)) : null;
+
+  // Show selected date label
+  const labelDate = new Date(selectedDate + 'T00:00:00');
+  document.getElementById('daily-date-label').textContent =
+    labelDate.toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+  // Show admin-only warning to non-admins
+  document.getElementById('daily-admin-warn').style.display = isAdmin ? 'none' : 'block';
+
+  // Entries for selected date — use privacy-aware getter
+  let todayEntries = getVisibleEntries().filter(e => e.date === selectedDate);
+  if (firmAuditorSet) todayEntries = todayEntries.filter(e => firmAuditorSet.has(e.auditor));
+
+  // Full auditor list — filter by firm if selected
+  const liveAuditors = getUsers()
+    .filter(u => u.role !== 'admin' && !u.disabled && u.auditorName && (!firmAuditorSet || firmAuditorSet.has(u.auditorName)))
+    .map(u => u.auditorName);
+  const allAuditors = isAdmin ? liveAuditors : [currentUser.auditorName];
+
+  // Who has updated on selected date
+  const updatedSet = new Set(todayEntries.map(e => e.auditor));
+  const updated = allAuditors.filter(a => updatedSet.has(a));
+  const notUpdated = allAuditors.filter(a => !updatedSet.has(a));
+  const totalCount = isAdmin ? allAuditors.length : 1;
+
+  // Summary stats
+  document.getElementById('daily-summary-stats').innerHTML = `
+    <div class="daily-stat">
+      <div class="daily-stat-val amber">${totalCount}</div>
+      <div class="daily-stat-label">Total Auditors</div>
+    </div>
+    <div class="daily-stat">
+      <div class="daily-stat-val green">${updated.length}</div>
+      <div class="daily-stat-label">Updated</div>
+    </div>
+    <div class="daily-stat">
+      <div class="daily-stat-val red">${notUpdated.length}</div>
+      <div class="daily-stat-label">Not Updated</div>
+    </div>
+  `;
+
+  // Build updated column
+  let updatedHtml = '';
+  if (updated.length) {
+    updated.forEach(name => {
+      const cnt = todayEntries.filter(e => e.auditor === name).length;
+      const ftag = isAdmin ? firmTag(firmForAuditor(name)) : '';
+      updatedHtml += `<div class="daily-person-row">
+        <span class="daily-person-name">${name} ${ftag}</span>
+        <span class="daily-person-badge done">${cnt} entr${cnt===1?'y':'ies'}</span>
+      </div>`;
+    });
+  } else {
+    updatedHtml = '<div class="daily-admin-note">No auditors have submitted entries for this date.</div>';
+  }
+
+  // Build not-updated column
+  let notUpdatedHtml = '';
+  if (notUpdated.length) {
+    notUpdated.forEach(name => {
+      const ftag = isAdmin ? firmTag(firmForAuditor(name)) : '';
+      notUpdatedHtml += `<div class="daily-person-row">
+        <span class="daily-person-name">${name} ${ftag}</span>
+        <span class="daily-person-badge miss">Pending</span>
+      </div>`;
+    });
+  } else {
+    notUpdatedHtml = '<div class="daily-admin-note">🎉 All auditors have submitted entries for this date!</div>';
+  }
+
+  document.getElementById('daily-columns').innerHTML = `
+    <div class="daily-col-card">
+      <div class="daily-col-header updated">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Tracker Updated
+        <span class="hcount">${updated.length}</span>
+      </div>
+      <div class="daily-col-body">${updatedHtml}</div>
+    </div>
+    <div class="daily-col-card">
+      <div class="daily-col-header not-updated">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        Not Updated
+        <span class="hcount">${notUpdated.length}</span>
+      </div>
+      <div class="daily-col-body">${notUpdatedHtml}</div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════
+function renderCalendar() {
+  const g=getGlobal();
+  const isAdmin = currentUser.role === 'admin';
+  // Show firm filter for admin only
+  const fg = document.getElementById('cal-firm-group');
+  if (fg) fg.style.display = isAdmin ? 'block' : 'none';
+  const fFirm = isAdmin ? (document.getElementById('cal-firm')?.value || '') : '';
+  const firmAuditorSet = fFirm ? new Set(getUsers().filter(u=>u.firm===fFirm&&u.auditorName).map(u=>u.auditorName)) : null;
+
+  const monthIdx=parseInt(document.getElementById('cal-month').value);
+  const year=parseInt(document.getElementById('cal-year').value);
+  const person=document.getElementById('cal-person').value;
+  const company=document.getElementById('cal-company-f').value;
+  const status=document.getElementById('cal-status').value;
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-title').textContent=months[monthIdx]+' '+year;
+
+  let entries=getVisibleEntries().filter(e=>{const d=new Date(e.date);return d.getMonth()===monthIdx&&d.getFullYear()===year;});
+  if(firmAuditorSet) entries=entries.filter(e=>firmAuditorSet.has(e.auditor));
+  if(person) entries=entries.filter(e=>e.auditor===person);
+  if(company) entries=entries.filter(e=>e.company===company);
+  if(status) entries=entries.filter(e=>e.status===status);
+  document.getElementById('cal-completed-count').textContent=entries.filter(e=>e.status==='Completed').length;
+
+  // All active auditors (filtered by firm/person if selected)
+  const allAuditors = getUsers()
+    .filter(u => u.role !== 'admin' && !u.disabled && u.auditorName
+      && (!firmAuditorSet || firmAuditorSet.has(u.auditorName))
+      && (!person || u.auditorName === person))
+    .map(u => u.auditorName);
+
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  document.getElementById('cal-header').innerHTML=days.map(d=>`<div class="cal-day-name">${d}</div>`).join('');
+  const firstDay=new Date(year,monthIdx,1).getDay();
+  const daysInMonth=new Date(year,monthIdx+1,0).getDate();
+  const today=new Date();
+  let cells='';
+  for(let i=0;i<firstDay;i++) cells+=`<div class="cal-cell empty"></div>`;
+
+  for(let d=1;d<=daysInMonth;d++){
+    const isToday=today.getDate()===d&&today.getMonth()===monthIdx&&today.getFullYear()===year;
+    const isPast = new Date(year,monthIdx,d) < new Date(today.getFullYear(),today.getMonth(),today.getDate());
+    const dateStr=`${year}-${String(monthIdx+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayE=entries.filter(e=>e.date===dateStr);
+
+    // Auditors who have NOT submitted for this day (only for past dates when admin)
+    const submittedSet = new Set(dayE.map(e=>e.auditor));
+    const leaveAuditors = (isAdmin && isPast)
+      ? allAuditors.filter(a => !submittedSet.has(a))
+      : [];
+
+    const shown = dayE.slice(0,3);
+    const totalItems = dayE.length + leaveAuditors.length;
+    const shownLeave = shown.length < 3 ? leaveAuditors.slice(0, 3 - shown.length) : [];
+    const extra = totalItems - shown.length - shownLeave.length;
+
+    const entryChips = shown.map(e=>
+      `<div class="cal-task ${statusClass(e.status)}" title="${e.auditor} | ${e.company}: ${e.task||''}">${e.auditor.split(' ')[0]}: ${(e.task||e.manualTask||'').substring(0,12)}</div>`
+    ).join('');
+    const leaveChips = shownLeave.map(a=>
+      `<div class="cal-task-leave">${a.split(' ')[0]}: Leave</div>`
+    ).join('');
+    const moreBtn = extra>0
+      ? `<div class="cal-more" onclick="openCalPopup('${dateStr}','${months[monthIdx]} ${d}, ${year}')">+${extra} more</div>`
+      : (totalItems > 0 && (dayE.length + leaveAuditors.length) > shown.length + shownLeave.length
+          ? `<div class="cal-more" onclick="openCalPopup('${dateStr}','${months[monthIdx]} ${d}, ${year}')">see all</div>`
+          : '');
+
+    // Make the whole cell clickable if there's data
+    const clickAttr = totalItems > 0 ? `style="cursor:pointer" onclick="openCalPopup('${dateStr}','${months[monthIdx]} ${d}, ${year}')"` : '';
+
+    cells+=`<div class="cal-cell${isToday?' today':''}" ${clickAttr}>
+      <div class="cal-date">${d}</div>
+      ${entryChips}${leaveChips}
+      ${extra>0 ? `<div class="cal-more" onclick="event.stopPropagation();openCalPopup('${dateStr}','${months[monthIdx]} ${d}, ${year}')">+${extra} more</div>` : ''}
+    </div>`;
+  }
+  document.getElementById('cal-grid').innerHTML=cells;
+}
+
+// ── Calendar popup — show ALL entries + leave for a day ──
+function openCalPopup(dateStr, label) {
+  const g = getGlobal();
+  const isAdmin = currentUser.role === 'admin';
+  const fFirm = isAdmin ? (document.getElementById('cal-firm')?.value || '') : '';
+  const firmAuditorSet = fFirm ? new Set(getUsers().filter(u=>u.firm===fFirm&&u.auditorName).map(u=>u.auditorName)) : null;
+  const person = document.getElementById('cal-person').value;
+
+  let dayEntries = getVisibleEntries().filter(e => e.date === dateStr);
+  if (firmAuditorSet) dayEntries = dayEntries.filter(e => firmAuditorSet.has(e.auditor));
+  if (person) dayEntries = dayEntries.filter(e => e.auditor === person);
+
+  const allAuditors = getUsers()
+    .filter(u => u.role !== 'admin' && !u.disabled && u.auditorName
+      && (!firmAuditorSet || firmAuditorSet.has(u.auditorName))
+      && (!person || u.auditorName === person))
+    .map(u => u.auditorName);
+
+  const submittedSet = new Set(dayEntries.map(e => e.auditor));
+  const leaveAuditors = isAdmin ? allAuditors.filter(a => !submittedSet.has(a)) : [];
+
+  document.getElementById('cal-popup-title').textContent = label;
+
+  let html = '';
+  if (dayEntries.length === 0 && leaveAuditors.length === 0) {
+    html = '<p style="color:var(--muted);font-size:.85rem;text-align:center;padding:1rem">No data for this day.</p>';
+  } else {
+    // Submitted entries
+    dayEntries.forEach(e => {
+      html += `<div class="cal-popup-row">
+        <div class="cal-popup-auditor">${e.auditor}</div>
+        <div class="cal-popup-detail">
+          <div style="font-weight:600">${e.company} — ${e.tasktype}</div>
+          <div style="color:var(--muted);font-size:.78rem">${e.task||e.manualTask||'—'}</div>
+        </div>
+        <div class="cal-popup-badge">${badge(e.status)}</div>
+      </div>`;
+    });
+    // Leave entries
+    leaveAuditors.forEach(a => {
+      const ftag = isAdmin ? firmTag(firmForAuditor(a)) : '';
+      html += `<div class="cal-popup-row">
+        <div class="cal-popup-auditor">${a} ${ftag}</div>
+        <div class="cal-popup-detail cal-popup-leave">No entry submitted — Leave</div>
+        <div class="cal-popup-badge"><span style="background:#f1f5f9;color:#9ca3af;padding:.2rem .6rem;border-radius:20px;font-size:.7rem;font-weight:700">Leave</span></div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('cal-popup-body').innerHTML = html;
+  document.getElementById('cal-popup-overlay').style.display = 'flex';
+}
+
+function closeCalPopup() {
+  document.getElementById('cal-popup-overlay').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════
+// MASTER DATA
+// ═══════════════════════════════════════════════════════
+function switchMasterTab(id) {
+  // Block non-admins from accessing admin-only tabs
+  const adminOnlyTabs = ['users'];
+  if (adminOnlyTabs.includes(id) && currentUser.role !== 'admin') {
+    showToast('This tab is restricted to administrators.', 'error');
+    return;
+  }
+  document.querySelectorAll('.master-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.master-panel').forEach(p => p.classList.remove('active'));
+  const tabMap = {'subtasks':0,'users':1};
+  document.querySelectorAll('.master-tab')[tabMap[id]].classList.add('active');
+  document.getElementById('master-'+id).classList.add('active');
+  renderAllMasterLists();
+}
+
+function populateMasterSelects() {
+  const g = getGlobal();
+  // Live auditor names from user accounts
+  const liveAuditors = getUsers()
+    .filter(u => u.role !== 'admin' && u.auditorName)
+    .map(u => u.auditorName);
+
+  const populate=(id,arr,firstOpt)=>{ const s=document.getElementById(id); if(!s) return; const cur=s.value; s.innerHTML=(firstOpt||'<option value="">All</option>')+arr.map(v=>`<option>${v}</option>`).join(''); if(cur) for(const o of s.options) if(o.value===cur){o.selected=true;break;} };
+  populate('add-ac-auditor', liveAuditors, '<option value="">Select Auditor…</option>');
+  populate('add-ac-company', getMyCompanies(),  '<option value="">Select Company…</option>');
+  populate('filter-ac-auditor', liveAuditors);
+  populate('add-att-auditor', liveAuditors, '<option value="">Select Auditor…</option>');
+  populate('add-att-tasktype', getMyTaskTypes(), '<option value="">Select Task Type…</option>');
+  populate('filter-att-auditor', liveAuditors);
+  populate('filter-att-company', getMyCompanies());
+  populate('add-st-company',  getMyCompanies(),  '<option value="">Company…</option>');
+  populate('add-st-tasktype', getMyTaskTypes(),  '<option value="">Task Type…</option>');
+  populate('filter-st-company',  getMyCompanies());
+  populate('filter-st-tasktype', getMyTaskTypes());
+}
+
+function syncAttCompanies() {
+  const auditor=document.getElementById('add-att-auditor').value;
+  const s=document.getElementById('add-att-company');
+  if(!auditor){s.innerHTML='<option value="">Select Company…</option>';return;}
+  const companies=getCompaniesForAuditor(auditor);
+  s.innerHTML='<option value="">Select Company…</option>'+companies.map(c=>`<option>${c}</option>`).join('');
+}
+
+function addAuditorCompany() {
+  const auditor=document.getElementById('add-ac-auditor').value;
+  const company=document.getElementById('add-ac-company').value;
+  if(!auditor||!company){showToast('Select both Auditor and Company','error');return;}
+  const g=getGlobal();
+  if(g.auditorCompany.find(r=>r.auditor===auditor&&r.company===company)){showToast('Already assigned','error');return;}
+  g.auditorCompany.push({auditor,company});
+  saveGlobal(g);
+  renderAuditorCompanyList();
+  showToast('Assigned: '+auditor+' → '+company,'success');
+}
+
+function deleteAuditorCompany(idx) {
+  const g=getGlobal();
+  g.auditorCompany.splice(idx,1);
+  saveGlobal(g);
+  renderAuditorCompanyList();
+  showToast('Assignment removed','success');
+}
+
+function renderAuditorCompanyList() {
+  const g=getGlobal();
+  const filter=document.getElementById('filter-ac-auditor').value;
+  let rows=g.auditorCompany.map((r,i)=>({...r,_i:i}));
+  if(filter) rows=rows.filter(r=>r.auditor===filter);
+  document.getElementById('list-auditor-company').innerHTML=rows.length?renderTable(
+    ['Auditor','Company',''],
+    rows.map(r=>[r.auditor,r.company,`<button class="btn-del" onclick="deleteAuditorCompany(${r._i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6m4-6v6"/></svg></button>`])
+  ):`<p style="color:var(--muted);font-size:.83rem">No assignments yet.</p>`;
+}
+
+function addAuditorTaskType() {
+  const auditor=document.getElementById('add-att-auditor').value;
+  const company=document.getElementById('add-att-company').value;
+  const taskType=document.getElementById('add-att-tasktype').value;
+  if(!auditor||!company||!taskType){showToast('All fields required','error');return;}
+  const g=getGlobal();
+  if(g.auditorTaskType.find(r=>r.auditor===auditor&&r.company===company&&r.taskType===taskType)){showToast('Already assigned','error');return;}
+  g.auditorTaskType.push({auditor,company,taskType});
+  saveGlobal(g);
+  renderAuditorTaskTypeList();
+  showToast('Assigned: '+auditor+' → '+company+' → '+taskType,'success');
+}
+
+function deleteAuditorTaskType(idx) {
+  const g=getGlobal();
+  g.auditorTaskType.splice(idx,1);
+  saveGlobal(g);
+  renderAuditorTaskTypeList();
+  showToast('Assignment removed','success');
+}
+
+function renderAuditorTaskTypeList() {
+  const g=getGlobal();
+  const fa=document.getElementById('filter-att-auditor').value;
+  const fc=document.getElementById('filter-att-company').value;
+  let rows=g.auditorTaskType.map((r,i)=>({...r,_i:i}));
+  if(fa) rows=rows.filter(r=>r.auditor===fa);
+  if(fc) rows=rows.filter(r=>r.company===fc);
+  document.getElementById('list-auditor-tasktype').innerHTML=rows.length?renderTable(
+    ['Auditor','Company','Task Type',''],
+    rows.map(r=>[r.auditor,r.company,r.taskType,`<button class="btn-del" onclick="deleteAuditorTaskType(${r._i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6m4-6v6"/></svg></button>`])
+  ):`<p style="color:var(--muted);font-size:.83rem">No assignments yet.</p>`;
+}
+
+function addCompany() {
+  const v=document.getElementById('add-company-name').value.trim();
+  if(!v) return;
+  const g=getGlobal();
+  const owner = currentUser.role === 'admin' ? '' : (currentUser.auditorName || '');
+  // Only block exact same name+owner — different users can add same company name
+  if(g.companies.find(c=>c.name===v&&c.owner===owner)){showToast('You have already added this company','error');return;}
+  g.companies.push({name:v, owner});
+  saveGlobal(g);
+  document.getElementById('add-company-name').value='';
+  renderCompanyList(); populateMasterSelects();
+  showToast('Company added','success');
+}
+
+function deleteCompany(idx) {
+  const g=getGlobal();
+  const visible = getMyCompaniesRaw();
+  const rec = visible[idx];
+  if(!rec) return;
+  const gIdx = g.companies.findIndex(c => c.name===rec.name && c.owner===rec.owner);
+  if(gIdx===-1) return;
+  g.companies.splice(gIdx,1);
+  saveGlobal(g); renderCompanyList(); populateMasterSelects();
+}
+
+// Raw list for display — includes duplicates across owners
+function getMyCompaniesRaw() {
+  const g = getGlobal();
+  if (!currentUser) return [];
+  if (currentUser.role === 'admin') return g.companies;
+  const owner = currentUser.auditorName || '';
+  return g.companies.filter(c => c.owner === '' || c.owner === owner);
+}
+
+function renderCompanyList() {
+  const isAdmin = currentUser.role === 'admin';
+  const owner = currentUser.auditorName || '';
+  const rows = getMyCompaniesRaw();
+  const delSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>`;
+  document.getElementById('list-companies').innerHTML = rows.length
+    ? renderTable(['#','Company','Added By',''], rows.map((c,i) => {
+        const addedBy = c.owner === ''
+          ? '<span style="color:var(--muted);font-size:.75rem">Admin / Shared</span>'
+          : `<strong>${c.owner}</strong>`;
+        const isOwn = isAdmin || c.owner === owner;
+        const action = isOwn
+          ? `<button class="btn-del" onclick="deleteCompany(${i})">${delSvg}</button>`
+          : `<span title="Shared record" style="color:var(--muted);font-size:.75rem">🌐</span>`;
+        return [i+1, c.name, addedBy, action];
+      }))
+    : `<p style="color:var(--muted);font-size:.83rem">${isAdmin?'No companies.':'No companies yet.'}</p>`;
+}
+
+
+function addTaskType() {
+  const v=document.getElementById('add-tasktype-name').value.trim();
+  if(!v) return;
+  const g=getGlobal();
+  const owner = currentUser.role === 'admin' ? '' : (currentUser.auditorName || '');
+  if(g.taskTypes.find(t=>t.name===v&&t.owner===owner)){showToast('Already exists','error');return;}
+  g.taskTypes.push({name:v, owner});
+  saveGlobal(g);
+  document.getElementById('add-tasktype-name').value='';
+  renderTaskTypeList(); populateMasterSelects();
+  showToast('Task Type added','success');
+}
+
+function deleteTaskType(idx) {
+  const g=getGlobal();
+  const visible = getMyTaskTypes();
+  const nameToDelete = visible[idx];
+  const owner = currentUser.role === 'admin' ? '' : (currentUser.auditorName || '');
+  const gIdx = g.taskTypes.findIndex(t => t.name===nameToDelete && t.owner===owner);
+  if(gIdx===-1) return;
+  g.taskTypes.splice(gIdx,1);
+  saveGlobal(g); renderTaskTypeList(); populateMasterSelects();
+}
+
+function renderTaskTypeList() {
+  const myTaskTypes = getMyTaskTypes();
+  const isAdmin = currentUser.role === 'admin';
+  const delSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>`;
+  const delBtn = (i) => `<button class="btn-del" onclick="deleteTaskType(${i})">${delSvg}</button>`;
+  document.getElementById('list-tasktypes').innerHTML = myTaskTypes.length
+    ? renderTable(['#','Task Type',''], myTaskTypes.map((t,i)=>[i+1, t, delBtn(i)]))
+    : `<p style="color:var(--muted);font-size:.83rem">${isAdmin?'No task types.':'No task types added yet.'}</p>`;
+}
+
+function addSubTask() {
+  const company=document.getElementById('add-st-company').value;
+  const taskType=document.getElementById('add-st-tasktype').value;
+  const name=document.getElementById('add-st-name').value.trim();
+  if(!company||!taskType||!name){showToast('All fields required','error');return;}
+  const g=getGlobal();
+  const owner = currentUser.role === 'admin' ? '' : (currentUser.auditorName || '');
+  if(g.subTasks.find(s=>s.company===company&&s.taskType===taskType&&s.name===name&&s.owner===owner)){showToast('Already exists','error');return;}
+  g.subTasks.push({company, taskType, name, owner});
+  saveGlobal(g);
+  document.getElementById('add-st-name').value='';
+  renderSubTaskList();
+  showToast('Sub Task added','success');
+}
+
+function deleteSubTask(idx) {
+  const g=getGlobal();
+  const myRows = getMySubTasks().map((s,i)=>({...s,_i:i}));
+  const row = myRows[idx];
+  if(!row) return;
+  const gIdx = g.subTasks.indexOf(g.subTasks.find(s=>
+    s.company===row.company&&s.taskType===row.taskType&&s.name===row.name&&s.owner===row.owner));
+  if(gIdx===-1) return;
+  g.subTasks.splice(gIdx,1);
+  saveGlobal(g); renderSubTaskList();
+}
+
+function renderSubTaskList() {
+  const isAdmin = currentUser.role === 'admin';
+  const fc=document.getElementById('filter-st-company').value;
+  const ft=document.getElementById('filter-st-tasktype').value;
+  let rows = getMySubTasks().map((s,i)=>({...s,_mi:i}));
+  if(fc) rows=rows.filter(r=>r.company===fc);
+  if(ft) rows=rows.filter(r=>r.taskType===ft);
+  const delSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>`;
+  const delBtn = (r) => `<button class="btn-del" onclick="deleteSubTask(${r._mi})">${delSvg}</button>`;
+  document.getElementById('list-subtasks').innerHTML = rows.length
+    ? renderTable(['Company','Task Type','Sub Task',''], rows.map(r=>[r.company,r.taskType,r.name,delBtn(r)]))
+    : `<p style="color:var(--muted);font-size:.83rem">No sub-tasks for selected filters.</p>`;
+}
+
+function renderUserList() {
+  const allUsers = getUsers();
+  const isAdmin = currentUser.role === 'admin';
+
+  // Non-admin: show only their own profile — no management actions
+  if (!isAdmin) {
+    const me = allUsers.find(u => u.username === currentUser.username);
+    if (!me) { document.getElementById('list-users').innerHTML = '<p style="color:var(--muted);font-size:.83rem">No profile found.</p>'; return; }
+    const firmPill = me.firm
+      ? `<span class="firm-pill firm-${me.firm}">${me.firm}</span>`
+      : `<span class="firm-pill firm-none">Unassigned</span>`;
+    document.getElementById('list-users').innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Username</th><th>Name</th><th>Auditor Name</th><th>Firm</th><th>Status</th></tr></thead>
+          <tbody><tr>
+            <td><strong>${me.username}</strong></td>
+            <td>${me.name}</td>
+            <td>${me.auditorName||'—'}</td>
+            <td>${firmPill}</td>
+            <td>${me.disabled?'<span class="badge-disabled">Disabled</span>':'<span class="badge-active">Active</span>'}</td>
+          </tr></tbody>
+        </table>
+      </div>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:.6rem">Contact your administrator to update your profile or reset your password.</p>`;
+    return;
+  }
+
+  // Admin: full user list with all actions
+  if (!allUsers.length) {
+    document.getElementById('list-users').innerHTML = '<p style="color:var(--muted);font-size:.83rem">No users found.</p>';
+    return;
+  }
+  const rows = allUsers.map(u => {
+    const statusBadge = u.disabled
+      ? '<span class="badge-disabled">Disabled</span>'
+      : '<span class="badge-active">Active</span>';
+    const resetFlag = u.resetRequested
+      ? ' <span title="Password reset requested" style="color:#856404;font-weight:700">🔔 Reset Requested</span>'
+      : '';
+    const isAdminUser = u.role === 'admin';
+    const firmPill = isAdminUser ? '<span style="color:var(--muted);font-size:.75rem">—</span>'
+      : u.firm
+        ? `<span class="firm-pill firm-${u.firm}">${u.firm}</span>`
+        : `<span class="firm-pill firm-none">Unassigned</span>`;
+    const firmBtn = isAdminUser ? '' :
+      `<button class="btn-user-action" style="background:#e0e7ff;color:#3730a3;border:none"
+         onclick="openFirmModal('${u.username}','${u.firm||''}')">🏢 Firm</button>`;
+    const actions = isAdminUser ? '<span style="font-size:.75rem;color:var(--muted)">—</span>' : `
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+        ${firmBtn}
+        <button class="btn-user-action btn-reset-pw" onclick="openResetModal('${u.username}')">Reset PW</button>
+        <button class="btn-user-action ${u.disabled?'btn-enable':'btn-disable'}"
+          onclick="toggleUserDisabled('${u.username}')">${u.disabled?'Enable':'Disable'}</button>
+        <button class="btn-user-action btn-del-user" onclick="deleteUser('${u.username}')">Delete</button>
+      </div>`;
+    return `<tr>
+      <td><strong>${u.username}</strong>${resetFlag}</td>
+      <td>${u.name}</td>
+      <td>${u.auditorName||'—'}</td>
+      <td>${u.role==='admin'?'Admin':'Auditor'}</td>
+      <td>${firmPill}</td>
+      <td>${statusBadge}</td>
+      <td>${actions}</td>
+    </tr>`;
+  });
+  document.getElementById('list-users').innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Username</th><th>Name</th><th>Auditor Name</th><th>Role</th><th>Firm</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${rows.join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// FIRM MODAL (admin only)
+// ═══════════════════════════════════════════════════════
+let _firmUser = null, _firmPicked = '';
+
+function openFirmModal(username, currentFirm) {
+  _firmUser   = username;
+  _firmPicked = currentFirm || '';
+  document.getElementById('firm-modal-sub').textContent = `User: ${username}`;
+  // Reset options
+  ['SNS','MKM',''].forEach(f => {
+    const opt = document.getElementById('fopt-' + f);
+    const chk = document.getElementById('fchk-' + f);
+    if (opt) opt.classList.remove('sel');
+    if (chk) chk.style.display = 'none';
+  });
+  // Highlight current
+  const curOpt = document.getElementById('fopt-' + _firmPicked);
+  const curChk = document.getElementById('fchk-' + _firmPicked);
+  if (curOpt) curOpt.classList.add('sel');
+  if (curChk) curChk.style.display = 'block';
+  document.getElementById('firm-modal-overlay').style.display = 'flex';
+}
+
+function pickFirm(f) {
+  _firmPicked = f;
+  ['SNS','MKM',''].forEach(k => {
+    const opt = document.getElementById('fopt-' + k);
+    const chk = document.getElementById('fchk-' + k);
+    if (opt) opt.classList.toggle('sel', k === f);
+    if (chk) chk.style.display = k === f ? 'block' : 'none';
+  });
+}
+
+function closeFirmModal() {
+  document.getElementById('firm-modal-overlay').style.display = 'none';
+  _firmUser = null;
+}
+
+async function saveFirmAssign() {
+  if (!_firmUser) return;
+  const users = getUsers();
+  const u = users.find(x => x.username === _firmUser);
+  if (!u) return;
+  u.firm = _firmPicked;
+  closeFirmModal();
+  await saveUsers(users);
+  renderUserList();
+  showToast(`Firm "${_firmPicked || 'Unassigned'}" saved for ${u.name}`, 'success');
+}
+
+// Helper: get auditor names for a given firm ('' = all)
+function getAuditorsForFirm(firm) {
+  return getUsers()
+    .filter(u => u.role !== 'admin' && !u.disabled && u.auditorName && (!firm || u.firm === firm))
+    .map(u => u.auditorName);
+}
+
+// Helper: firm tag HTML for admin reports
+function firmTag(firm) {
+  if (!firm) return '';
+  return `<span class="report-firm-tag rtag-${firm}">${firm}</span>`;
+}
+
+// Helper: get firm for a given auditor name
+function firmForAuditor(auditorName) {
+  const u = getUsers().find(x => x.auditorName === auditorName);
+  return u ? (u.firm || '') : '';
+}
+
+function renderAllMasterLists() {
+  renderAuditorCompanyList();
+  renderAuditorTaskTypeList();
+  renderCompanyList();
+  renderTaskTypeList();
+  renderSubTaskList();
+  renderUserList();
+}
+
+// ═══════════════════════════════════════════════════════
+// VISUAL REPORTS
+// ═══════════════════════════════════════════════════════
+const VR_COLORS = {
+  completed : '#1e7e34', inProgress: '#f0a500',
+  hold      : '#6c757d', notWorking: '#d93025',
+  blue      : '#2557a7', navy: '#0f2044',
+  teal      : '#17a2b8', purple: '#6f42c1'
+};
+const CHART_PALETTE = ['#2557a7','#f0a500','#1e7e34','#d93025','#17a2b8','#6f42c1','#fd7e14','#20c997'];
+
+// Keep chart instances so we can destroy before re-render
+let _vrCharts = {};
+
+function destroyChart(id) {
+  if (_vrCharts[id]) { _vrCharts[id].destroy(); delete _vrCharts[id]; }
+}
+
+function initVisualReports() {
+  const g = getGlobal();
+  const isAdmin = currentUser.role === 'admin';
+  const visE = getVisibleEntries();
+  const months   = [...new Set(visE.map(e => e.month))].filter(Boolean).sort();
+  const companies= isAdmin ? g.companies.map(c=>c.name) : [...new Set(visE.map(e=>e.company))].filter(Boolean);
+  const auditors = isAdmin
+    ? getUsers().filter(u => u.role !== 'admin' && !u.disabled && u.auditorName).map(u => u.auditorName)
+    : [currentUser.auditorName];
+
+  // Show firm filter only for admin
+  document.getElementById('vr-firm-group').style.display = isAdmin ? 'block' : 'none';
+
+  const fill = (id, arr, allLabel) => {
+    const s = document.getElementById(id); if (!s) return;
+    s.innerHTML = `<option value="">${allLabel}</option>` + arr.map(v => `<option>${v}</option>`).join('');
+  };
+  fill('vr-month',   months,    'All Months');
+  fill('vr-company', companies, 'All Companies');
+  fill('vr-auditor', auditors,  'All Auditors');
+
+  renderVisualReports();
+}
+
+function renderVisualReports() {
+  const g = getGlobal();
+  const isAdmin = currentUser.role === 'admin';
+  const fFirm    = isAdmin ? (document.getElementById('vr-firm')?.value || '') : (currentUser.firm || '');
+  const fMonth   = document.getElementById('vr-month').value;
+  const fCompany = document.getElementById('vr-company').value;
+  const fAuditor = document.getElementById('vr-auditor').value;
+
+  // Build set of auditors to include based on firm filter
+  const firmAuditorSet = fFirm
+    ? new Set(getUsers().filter(u => u.role !== 'admin' && u.firm === fFirm && u.auditorName).map(u => u.auditorName))
+    : null;
+
+  let entries = getVisibleEntries();
+  if (firmAuditorSet) entries = entries.filter(e => firmAuditorSet.has(e.auditor));
+  if (fMonth)   entries = entries.filter(e => e.month   === fMonth);
+  if (fCompany) entries = entries.filter(e => e.company === fCompany);
+  if (fAuditor) entries = entries.filter(e => e.auditor === fAuditor);
+
+  renderTeamPerformanceChart(entries, g);
+  renderCompanyCompletionChart(entries, g);
+  renderMonthlyTrendChart(entries, fCompany, fAuditor);
+  renderHeatmap(entries, fCompany, fAuditor);
+}
+
+// ── Chart 1: Team Performance (grouped bar) ──
+function renderTeamPerformanceChart(entries, g) {
+  destroyChart('team');
+  const auditors = [...new Set(entries.map(e => e.auditor))].filter(Boolean).sort();
+  if (!auditors.length) { showEmptyChart('chart-team', 'No data for selected filters'); return; }
+
+  const total     = auditors.map(a => entries.filter(e => e.auditor === a).length);
+  const completed = auditors.map(a => entries.filter(e => e.auditor === a && e.status === 'Completed').length);
+  const inProg    = auditors.map(a => entries.filter(e => e.auditor === a && e.status === 'In Progress').length);
+
+  const ctx = document.getElementById('chart-team').getContext('2d');
+  _vrCharts['team'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: auditors,
+      datasets: [
+        { label: 'Total',       data: total,     backgroundColor: 'rgba(37,87,167,.18)',  borderColor: VR_COLORS.blue,       borderWidth: 2, borderRadius: 4 },
+        { label: 'Completed',   data: completed, backgroundColor: 'rgba(30,126,52,.75)',  borderColor: VR_COLORS.completed,  borderWidth: 2, borderRadius: 4 },
+        { label: 'In Progress', data: inProg,    backgroundColor: 'rgba(240,165,0,.75)',  borderColor: VR_COLORS.inProgress, borderWidth: 2, borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.06)' }, ticks: { stepSize: 1, font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ── Chart 2: Company-wise Completion (stacked horizontal bar) ──
+function renderCompanyCompletionChart(entries, g) {
+  destroyChart('company');
+  const companies = [...new Set(entries.map(e => e.company))].filter(Boolean);
+  if (!companies.length) { showEmptyChart('chart-company', 'No data for selected filters'); return; }
+
+  const statuses = ['Completed', 'In Progress', 'Hold', 'Not Working'];
+  const colors   = [VR_COLORS.completed, VR_COLORS.inProgress, VR_COLORS.hold, VR_COLORS.notWorking];
+  const bgAlpha  = ['rgba(30,126,52,.8)', 'rgba(240,165,0,.8)', 'rgba(108,117,125,.8)', 'rgba(217,48,37,.8)'];
+
+  const datasets = statuses.map((s, i) => ({
+    label: s,
+    data: companies.map(c => entries.filter(e => e.company === c && e.status === s).length),
+    backgroundColor: bgAlpha[i], borderColor: colors[i], borderWidth: 1, borderRadius: 3
+  }));
+
+  const ctx = document.getElementById('chart-company').getContext('2d');
+  _vrCharts['company'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: companies, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,.06)' }, ticks: { stepSize: 1, font: { size: 11 } } },
+        y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ── Chart 3: Monthly Trend (line chart — always uses full data) ──
+function renderMonthlyTrendChart(allEntries, fCompany, fAuditor) {
+  destroyChart('trend');
+  let entries = allEntries;
+  if (fCompany) entries = entries.filter(e => e.company === fCompany);
+  if (fAuditor) entries = entries.filter(e => e.auditor === fAuditor);
+
+  // Sort months chronologically
+  const monthOrder = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const allMonths = [...new Set(entries.map(e => e.month))].filter(Boolean);
+  allMonths.sort((a, b) => {
+    const [ma, ya] = a.split('-'); const [mb, yb] = b.split('-');
+    return (parseInt(ya)*12 + monthOrder.indexOf(ma)) - (parseInt(yb)*12 + monthOrder.indexOf(mb));
+  });
+
+  if (!allMonths.length) { showEmptyChart('chart-trend', 'No monthly data available'); return; }
+
+  const submitted = allMonths.map(m => entries.filter(e => e.month === m).length);
+  const completed = allMonths.map(m => entries.filter(e => e.month === m && e.status === 'Completed').length);
+
+  const ctx = document.getElementById('chart-trend').getContext('2d');
+  _vrCharts['trend'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: allMonths,
+      datasets: [
+        {
+          label: 'Total Submitted', data: submitted,
+          borderColor: VR_COLORS.blue, backgroundColor: 'rgba(37,87,167,.1)',
+          borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: VR_COLORS.blue,
+          tension: 0.35, fill: true
+        },
+        {
+          label: 'Completed', data: completed,
+          borderColor: VR_COLORS.completed, backgroundColor: 'rgba(30,126,52,.08)',
+          borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: VR_COLORS.completed,
+          tension: 0.35, fill: true
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.06)' }, ticks: { stepSize: 1, font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ── Chart 4: Daily Activity Heatmap (last 84 days = 12 weeks) ──
+function renderHeatmap(allEntries, fCompany, fAuditor) {
+  const container = document.getElementById('heatmap-container');
+  let entries = allEntries;
+  if (fCompany) entries = entries.filter(e => e.company === fCompany);
+  if (fAuditor) entries = entries.filter(e => e.auditor === fAuditor);
+
+  // Build count map
+  const countMap = {};
+  entries.forEach(e => { if (e.date) countMap[e.date] = (countMap[e.date] || 0) + 1; });
+
+  // Generate last 84 days (12 weeks), start from Sunday
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = [];
+  for (let i = 83; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    days.push(d);
+  }
+
+  const maxCount = Math.max(1, ...Object.values(countMap));
+  const getLevel = n => {
+    if (!n) return 0;
+    const pct = n / maxCount;
+    if (pct <= 0.25) return 1;
+    if (pct <= 0.5)  return 2;
+    if (pct <= 0.75) return 3;
+    return 4;
+  };
+
+  const dayNames = ['S','M','T','W','T','F','S'];
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Day-of-week header
+  const headerHtml = dayNames.map(d =>
+    `<div class="hm-month-label">${d}</div>`
+  ).join('');
+
+  // Cells
+  const cellsHtml = days.map(d => {
+    const key = d.toISOString().split('T')[0];
+    const count = countMap[key] || 0;
+    const level = getLevel(count);
+    const label = `${d.getDate()} ${monthNames[d.getMonth()]}: ${count} entr${count===1?'y':'ies'}`;
+    return `<div class="heatmap-cell hm-${level}" title="${label}"></div>`;
+  }).join('');
+
+  // Month labels above (show month name when month changes)
+  const monthLabels = days.map((d, i) => {
+    const show = i === 0 || d.getDate() === 1;
+    return `<div class="hm-month-label">${show ? monthNames[d.getMonth()] : ''}</div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="heatmap-months">${monthLabels}</div>
+    <div class="heatmap-months">${headerHtml}</div>
+    <div class="heatmap-grid">${cellsHtml}</div>`;
+}
+
+function showEmptyChart(canvasId, msg) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#9ca3af';
+  ctx.font = '13px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(msg, canvas.width / 2, canvas.height / 2);
+}
+
+// ═══════════════════════════════════════════════════════
+// DUE DATE FORM
+// ═══════════════════════════════════════════════════════
+function initDueDateForm() {
+  const g = getGlobal();
+  const users = getUsers();
+  const liveAuditors = users.filter(u => u.role !== 'admin' && !u.disabled && u.auditorName).map(u => u.auditorName);
+
+  // Populate auditor dropdown
+  const ddAud = document.getElementById('dd-auditor');
+  if (currentUser.role === 'admin') {
+    ddAud.innerHTML = '<option value="">Select Auditor…</option>' + liveAuditors.map(a => `<option>${a}</option>`).join('');
+    ddAud.disabled = false;
+  } else {
+    ddAud.innerHTML = `<option value="${currentUser.auditorName}">${currentUser.auditorName}</option>`;
+    ddAud.disabled = true;
+  }
+
+  // Populate all companies directly (no assignment filter)
+  const compSel = document.getElementById('dd-company');
+  compSel.innerHTML = '<option value="">Select Company…</option>' + getMyCompanies().map(c => `<option>${c}</option>`).join('');
+  compSel.disabled = false;
+
+  // Set default due date to today
+  document.getElementById('dd-duedate').value = new Date().toISOString().split('T')[0];
+
+  // Populate filter dropdowns
+  const fAud = document.getElementById('dd-filter-auditor');
+  fAud.innerHTML = '<option value="">All</option>' + liveAuditors.map(a => `<option>${a}</option>`).join('');
+  const fComp = document.getElementById('dd-filter-company');
+  fComp.innerHTML = '<option value="">All</option>' + getMyCompanies().map(c => `<option>${c}</option>`).join('');
+
+  renderDueDateList();
+}
+
+function onDdAuditorChange() {
+  // Auditor change — re-populate all companies (no assignment filter)
+  const g = getGlobal();
+  const compSel = document.getElementById('dd-company');
+  compSel.innerHTML = '<option value="">Select Company…</option>' + getMyCompanies().map(c => `<option>${c}</option>`).join('');
+  compSel.disabled = false;
+  // Reset task type
+  const ttSel = document.getElementById('dd-tasktype');
+  ttSel.innerHTML = '<option value="">Select Task Type…</option>';
+  ttSel.disabled = true;
+}
+
+function onDdCompanyChange() {
+  const g = getGlobal();
+  const company = document.getElementById('dd-company').value;
+  const ttSel = document.getElementById('dd-tasktype');
+  ttSel.innerHTML = '<option value="">Select Task Type…</option>';
+  ttSel.disabled = true;
+  if (!company) return;
+  // Show all task types that have sub-tasks for this company, else all task types
+  const taskTypes = [...new Set(getMySubTasks().filter(s=>s.company===company).map(s=>s.taskType))];
+  const list = taskTypes.length ? taskTypes : getMyTaskTypes();
+  ttSel.innerHTML = '<option value="">Select Task Type…</option>' + list.map(t => `<option>${t}</option>`).join('');
+  ttSel.disabled = false;
+}
+
+async function saveDueDate() {
+  const auditor  = document.getElementById('dd-auditor').value;
+  const company  = document.getElementById('dd-company').value;
+  const taskType = document.getElementById('dd-tasktype').value;
+  const dueDate  = document.getElementById('dd-duedate').value;
+  const remark   = document.getElementById('dd-remark').value.trim();
+
+  if (!auditor || !company || !taskType || !dueDate) {
+    showToast('All required fields must be filled', 'error'); return;
+  }
+
+  const g = getGlobal();
+  if (!g.dueDates) g.dueDates = [];
+
+  // Check for duplicate
+  const exists = g.dueDates.find(d => d.auditor === auditor && d.company === company && d.taskType === taskType);
+  if (exists) {
+    if (!confirm(`A due date already exists for ${auditor} → ${company} → ${taskType}.\nUpdate it to ${fmtDate(dueDate)}?`)) return;
+    // Update existing
+    showLoading('Saving…', 'Writing to database');
+    try {
+      exists.dueDate = dueDate; exists.remark = remark;
+      await sbDelete('due_dates', `auditor=eq.${encodeURIComponent(auditor)}&company=eq.${encodeURIComponent(company)}&task_type=eq.${encodeURIComponent(taskType)}`);
+      await sbApi('POST', 'due_dates', { body: { auditor, company, task_type: taskType, due_date: dueDate, remark } });
+      _prevGlobal.dueDates = JSON.parse(JSON.stringify(g.dueDates));
+      showToast('Due date updated ✓', 'success');
+    } catch(e) { showToast('⚠ Save failed', 'error'); console.error(e); }
+    finally { hideLoading(); }
+    renderDueDateList();
+    return;
+  }
+
+  // Insert new
+  const newRow = { id: Date.now(), auditor, company, taskType, dueDate, remark };
+  g.dueDates.push(newRow);
+  showLoading('Saving…', 'Writing to database');
+  try {
+    await sbApi('POST', 'due_dates', { body: { id: newRow.id, auditor, company, task_type: taskType, due_date: dueDate, remark } });
+    _prevGlobal.dueDates = JSON.parse(JSON.stringify(g.dueDates));
+    showToast('Due date saved ✓', 'success');
+    clearDdForm();
+  } catch(e) { showToast('⚠ Save failed', 'error'); console.error(e); g.dueDates.pop(); }
+  finally { hideLoading(); }
+  renderDueDateList();
+}
+
+async function deleteDueDate(id) {
+  if (!confirm('Delete this due date entry?')) return;
+  const g = getGlobal();
+  if (!g.dueDates) return;
+  const idx = g.dueDates.findIndex(d => d.id === id);
+  if (idx === -1) return;
+  g.dueDates.splice(idx, 1);
+  showLoading('Deleting…', 'Please wait');
+  try {
+    await sbDelete('due_dates', 'id=eq.' + id);
+    _prevGlobal.dueDates = JSON.parse(JSON.stringify(g.dueDates));
+    showToast('Deleted ✓', 'success');
+  } catch(e) { showToast('⚠ Delete failed', 'error'); console.error(e); }
+  finally { hideLoading(); }
+  renderDueDateList();
+}
+
+function clearDdForm() {
+  document.getElementById('dd-company').innerHTML = '<option value="">Select Company…</option>';
+  document.getElementById('dd-company').disabled = true;
+  document.getElementById('dd-tasktype').innerHTML = '<option value="">Select Task Type…</option>';
+  document.getElementById('dd-tasktype').disabled = true;
+  document.getElementById('dd-duedate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('dd-remark').value = '';
+  if (currentUser.role === 'admin') document.getElementById('dd-auditor').value = '';
+}
+
+function renderDueDateList() {
+  const g = getGlobal();
+  const dueDates = g.dueDates || [];
+  const fa = document.getElementById('dd-filter-auditor').value;
+  const fc = document.getElementById('dd-filter-company').value;
+  let rows = dueDates.filter(d => (!fa || d.auditor === fa) && (!fc || d.company === fc));
+  // Non-admin sees only own entries
+  if (currentUser.role !== 'admin') rows = rows.filter(d => d.auditor === currentUser.auditorName);
+
+  document.getElementById('dd-list-count').textContent = rows.length + ' records';
+  if (!rows.length) {
+    document.getElementById('dd-list-table').innerHTML = emptyState('No due dates set yet.');
+    return;
+  }
+  const today = new Date(); today.setHours(0,0,0,0);
+  document.getElementById('dd-list-table').innerHTML = `
+    <table>
+      <thead><tr><th>Auditor</th><th>Company</th><th>Task Type</th><th>Due Date</th><th>Remark</th><th></th></tr></thead>
+      <tbody>${rows.map(d => {
+        const dd = new Date(d.dueDate); dd.setHours(0,0,0,0);
+        const overdue = dd < today;
+        return `<tr>
+          <td>${d.auditor}</td>
+          <td>${d.company}</td>
+          <td>${d.taskType}</td>
+          <td style="${overdue ? 'color:var(--red);font-weight:700' : ''}">${fmtDate(d.dueDate)}</td>
+          <td>${d.remark || '—'}</td>
+          <td>${currentUser.role === 'admin' ? `<button class="btn-del" onclick="deleteDueDate(${d.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>` : ''}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// DUE DATE REPORT
+// ═══════════════════════════════════════════════════════
+function initDueDateReport() {
+  const g = getGlobal();
+  const isAdmin = currentUser.role === 'admin';
+  const months = [...new Set(getVisibleEntries().map(e => e.month))].filter(Boolean);
+
+  // Show firm filter for admin only
+  const fg = document.getElementById('ddr-firm-group');
+  if (fg) fg.style.display = isAdmin ? 'block' : 'none';
+
+  const compSel = document.getElementById('ddr-company');
+  compSel.innerHTML = '<option value="">All Companies</option>' + getMyCompanies().map(c => `<option>${c}</option>`).join('');
+
+  const monthSel = document.getElementById('ddr-month');
+  monthSel.innerHTML = '<option value="">All Months</option>' + months.map(m => `<option>${m}</option>`).join('');
+
+  renderDueDateReport();
+}
+
+function renderDueDateReport() {
+  const g = getGlobal();
+  const isAdmin = currentUser.role === 'admin';
+  const dueDates = getVisibleDueDates();
+  const entries = getVisibleEntries();
+
+  const filterFirm    = isAdmin ? (document.getElementById('ddr-firm')?.value || '') : '';
+  const filterCompany = document.getElementById('ddr-company').value;
+  const filterMonth   = document.getElementById('ddr-month').value;
+  const filterStatus  = document.getElementById('ddr-status').value;
+
+  const firmAuditorSet = filterFirm ? new Set(getUsers().filter(u=>u.firm===filterFirm&&u.auditorName).map(u=>u.auditorName)) : null;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Build report rows: one row per (auditor+company+taskType sub-task entry) joined with due date
+  const reportRows = [];
+
+  // For each due date record, find all matching entries
+  let ddList = dueDates;
+  if (firmAuditorSet) ddList = ddList.filter(d => firmAuditorSet.has(d.auditor));
+  if (filterCompany) ddList = ddList.filter(d => d.company === filterCompany);
+
+  ddList.forEach(dd => {
+    // Get all entries for this auditor+company+taskType combo
+    let matchEntries = entries.filter(e =>
+      e.auditor === dd.auditor &&
+      e.company === dd.company &&
+      e.tasktype === dd.taskType
+    );
+    if (filterMonth) matchEntries = matchEntries.filter(e => e.month === filterMonth);
+
+    if (matchEntries.length === 0) {
+      // Show the due date with no matching entries (task not started)
+      const dueD = new Date(dd.dueDate); dueD.setHours(0,0,0,0);
+      const isOverdue = dueD < today;
+      reportRows.push({
+        auditor: dd.auditor,
+        company: dd.company,
+        taskType: dd.taskType,
+        subTask: '—',
+        startDate: '—',
+        dueDate: dd.dueDate,
+        status: isOverdue ? 'Overdue' : 'Pending',
+        ageing: isOverdue ? daysBetween(dueD, today) : null,
+        remark: dd.remark
+      });
+    } else {
+      matchEntries.forEach(e => {
+        const dueD = new Date(dd.dueDate); dueD.setHours(0,0,0,0);
+        const isCompleted = e.status === 'Completed';
+        const startD = new Date(e.date); startD.setHours(0,0,0,0);
+        let status, ageing;
+
+        if (isCompleted) {
+          // Completed — ageing blank if done before/on due date, else show how late
+          if (startD <= dueD) { status = 'Completed'; ageing = null; }
+          else { status = 'Completed'; ageing = daysBetween(dueD, startD); }
+        } else {
+          // Not completed
+          if (dueD < today) { status = 'Overdue'; ageing = daysBetween(dueD, today); }
+          else { status = 'Pending'; ageing = null; }
+        }
+
+        reportRows.push({
+          auditor: dd.auditor,
+          company: dd.company,
+          taskType: dd.taskType,
+          subTask: e.task || e.manualTask || '—',
+          startDate: e.date,
+          dueDate: dd.dueDate,
+          status,
+          ageing,
+          remark: dd.remark
+        });
+      });
+    }
+  });
+
+  // Apply status filter
+  let filtered = filterStatus ? reportRows.filter(r => r.status === filterStatus) : reportRows;
+
+  // If no due dates exist but entries do, warn user
+  if (dueDates.length === 0) {
+    document.getElementById('ddr-table').innerHTML = emptyState('No due dates set yet. Please add due dates in the Due Date Form first.');
+    ['ddr-stat-total','ddr-stat-completed','ddr-stat-pending','ddr-stat-overdue'].forEach(id => document.getElementById(id).textContent = '');
+    return;
+  }
+
+  if (!filtered.length) {
+    document.getElementById('ddr-table').innerHTML = emptyState('No records match the selected filters.');
+    ['ddr-stat-total','ddr-stat-completed','ddr-stat-pending','ddr-stat-overdue'].forEach(id => document.getElementById(id).textContent = '');
+    return;
+  }
+
+  // Stats
+  const total     = filtered.length;
+  const completed = filtered.filter(r => r.status === 'Completed').length;
+  const pending   = filtered.filter(r => r.status === 'Pending').length;
+  const overdue   = filtered.filter(r => r.status === 'Overdue').length;
+  document.getElementById('ddr-stat-total').textContent     = `Total: ${total}`;
+  document.getElementById('ddr-stat-completed').textContent = `✓ Completed: ${completed}`;
+  document.getElementById('ddr-stat-pending').textContent   = `⏳ Pending: ${pending}`;
+  document.getElementById('ddr-stat-overdue').textContent   = `⚠ Overdue: ${overdue}`;
+
+  // Render table
+  const rows = filtered.map(r => {
+    const statusBadge = r.status === 'Completed'
+      ? `<span class="due-badge-completed">✓ Completed</span>`
+      : r.status === 'Overdue'
+      ? `<span class="due-badge-overdue">⚠ Overdue</span>`
+      : `<span class="due-badge-pending">⏳ Pending</span>`;
+
+    const ageingCell = r.ageing != null
+      ? `<span class="ageing-warn">${r.ageing} day${r.ageing !== 1 ? 's' : ''}</span>`
+      : `<span class="ageing-ok">—</span>`;
+
+    const firmCell = isAdmin ? `<td>${firmTag(firmForAuditor(r.auditor)) || '—'}</td>` : '';
+
+    return `<tr>
+      ${firmCell}
+      <td><strong>${r.auditor}</strong></td>
+      <td>${r.company}</td>
+      <td>${r.taskType}</td>
+      <td>${r.subTask}</td>
+      <td>${r.startDate !== '—' ? fmtDate(r.startDate) : '—'}</td>
+      <td>${fmtDate(r.dueDate)}</td>
+      <td>${ageingCell}</td>
+      <td>${statusBadge}</td>
+    </tr>`;
+  }).join('');
+
+  const firmHeader = isAdmin ? '<th>Firm</th>' : '';
+  document.getElementById('ddr-table').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          ${firmHeader}
+          <th>Auditor</th>
+          <th>Company</th>
+          <th>Task Type</th>
+          <th>Sub Task</th>
+          <th>Start Date</th>
+          <th>Due Date</th>
+          <th>Ageing</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function daysBetween(dateA, dateB) {
+  const msPerDay = 1000 * 60 * 60 * 24;
+  return Math.round(Math.abs(dateB - dateA) / msPerDay);
+}
+
+
+function badge(status) {
+  const map={'Completed':'badge-completed','In Progress':'badge-progress','Hold':'badge-hold','Not Working':'badge-notworking'};
+  return `<span class="badge ${map[status]||'badge-hold'}">${status||'—'}</span>`;
+}
+function statusClass(status) {
+  const map={'Completed':'completed','In Progress':'in-progress','Hold':'hold','Not Working':'not-working'};
+  return map[status]||'hold';
+}
+function fmtDate(d) { if(!d) return '—'; const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`; }
+function emptyState(msg) {
+  return `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><p>${msg}</p></div>`;
+}
+function renderTable(headers, rows) {
+  return `<table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+
+let toastTimer;
+function showToast(msg, type='success') {
+  const t=document.getElementById('toast');
+  t.textContent=(type==='success'?'✓  ':'✕  ')+msg;
+  t.className=`toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('auth-screen').style.display!=='none'){
+    if(document.getElementById('panel-login').classList.contains('active')) doLogin();
+  }
+});
+</script>
+
+<!-- FIRM MODAL -->
+<div class="firm-modal-overlay" id="firm-modal-overlay" onclick="if(event.target===this)closeFirmModal()">
+  <div class="firm-modal-box">
+    <div class="firm-modal-ttl">🏢 Assign Firm</div>
+    <div class="firm-modal-sub" id="firm-modal-sub">Choose firm for this user</div>
+    <div class="firm-opt" id="fopt-SNS" onclick="pickFirm('SNS')">
+      <div class="firm-dot dot-SNS"></div>SNS
+      <span class="firm-check" id="fchk-SNS" style="display:none">✓</span>
+    </div>
+    <div class="firm-opt" id="fopt-MKM" onclick="pickFirm('MKM')">
+      <div class="firm-dot dot-MKM"></div>MKM
+      <span class="firm-check" id="fchk-MKM" style="display:none">✓</span>
+    </div>
+    <div class="firm-opt" id="fopt-" onclick="pickFirm('')">
+      <div class="firm-dot dot-none"></div><span style="color:var(--muted)">Unassigned</span>
+      <span class="firm-check" id="fchk-" style="display:none">✓</span>
+    </div>
+    <div style="display:flex;gap:.7rem;margin-top:1.1rem">
+      <button onclick="saveFirmAssign()" style="flex:1;padding:.6rem;background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:.88rem">Save</button>
+      <button onclick="closeFirmModal()" style="flex:1;padding:.6rem;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;color:var(--muted);font-size:.88rem">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CALENDAR DAY POPUP -->
+<div class="cal-popup-overlay" id="cal-popup-overlay" onclick="if(event.target===this)closeCalPopup()">
+  <div class="cal-popup-box">
+    <div class="cal-popup-header">
+      <div class="cal-popup-title" id="cal-popup-title"></div>
+      <button class="cal-popup-close" onclick="closeCalPopup()">✕</button>
+    </div>
+    <div id="cal-popup-body"></div>
+  </div>
+</div>
+
+<!-- ENTRY EDIT MODAL -->
+<div class="entry-modal-overlay" id="entry-modal-overlay" onclick="if(event.target===this)closeEntryModal()">
+  <div class="entry-modal-box">
+    <div class="entry-modal-header">
+      <div class="entry-modal-title">✏️ Edit Entry</div>
+      <button class="entry-modal-close" onclick="closeEntryModal()">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Month *</label>
+        <select id="em-month" style="background:#f0f4ff;font-weight:600"></select>
+      </div>
+      <div class="form-group">
+        <label>Date *</label>
+        <input type="date" id="em-date">
+      </div>
+      <div class="form-group">
+        <label>Auditor *</label>
+        <select id="em-auditor"></select>
+      </div>
+      <div class="form-group">
+        <label>Status *</label>
+        <select id="em-status"><option value="">Select…</option><option>Completed</option><option>In Progress</option><option>Hold</option><option>Not Working</option></select>
+      </div>
+      <div class="form-group">
+        <label>Company *</label>
+        <select id="em-company"></select>
+      </div>
+      <div class="form-group">
+        <label>Critical Issue's</label>
+        <select id="em-critical"><option value="">Select…</option><option>Yes</option><option>No</option></select>
+      </div>
+      <div class="form-group">
+        <label>Task Type *</label>
+        <select id="em-tasktype"></select>
+      </div>
+      <div class="form-group">
+        <label>Process Owner</label>
+        <input type="text" id="em-processowner" placeholder="Process owner name">
+      </div>
+      <div class="form-group">
+        <label>Sub Task</label>
+        <select id="em-task"><option value="">Select…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Discussion</label>
+        <input type="text" id="em-discussion" placeholder="Discussion notes">
+      </div>
+      <div class="form-group">
+        <label>Manually Task</label>
+        <input type="text" id="em-manual" placeholder="Custom task if not in list">
+      </div>
+      <div class="form-group">
+        <label>Impact Found</label>
+        <input type="text" id="em-impact" placeholder="Impact found">
+      </div>
+      <div class="form-group">
+        <label>Report Link</label>
+        <input type="text" id="em-reportlink" placeholder="URL or file path">
+      </div>
+      <div class="form-group">
+        <label>Remark</label>
+        <input type="text" id="em-remark" placeholder="Additional remarks">
+      </div>
+    </div>
+    <div class="entry-modal-actions">
+      <button onclick="closeEntryModal()" style="padding:.6rem 1.2rem;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;color:var(--muted)">Cancel</button>
+      <button onclick="saveEditedEntry()" style="padding:.6rem 1.4rem;background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
