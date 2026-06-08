@@ -495,32 +495,156 @@
   @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
   /* MOBILE */
-  @media(max-width:900px){.stats-grid{grid-template-columns:repeat(3,1fr)}.summary-grid{grid-template-columns:1fr}.daily-grid{grid-template-columns:1fr}}
-  @media(max-width:768px){
-    .sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}
-    .sidebar-overlay.open{display:block}.main{margin-left:0;padding:1rem}.hamburger{display:block}
-    .form-grid{grid-template-columns:1fr 1fr;gap:.6rem}.form-grid .full{grid-column:1/-1}
-    .stats-grid{grid-template-columns:1fr 1fr}
-    .cal-cell{min-height:50px;padding:.25rem}.cal-task{display:none}
-  }
-  @media(max-width:480px){.stats-grid{grid-template-columns:1fr}.filter-bar{flex-direction:column}.filter-group{width:100%}}
-  /* ── TICKET SYSTEM ── */
-  .tkt-priority-low    { background:#f0fdf4;color:#15803d;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-priority-medium { background:#fefce8;color:#a16207;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-priority-high   { background:#fff7ed;color:#c2410c;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-priority-urgent { background:#fef2f2;color:#991b1b;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-status-new      { background:#eff6ff;color:#1d4ed8;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-status-assigned { background:#f5f3ff;color:#6d28d9;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-status-inprogress { background:#fff3cd;color:#856404;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-status-pending  { background:#e9ecef;color:#495057;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-status-completed { background:#d4edda;color:#145523;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-status-reverted { background:#fde8e8;color:#9b1c1c;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-status-closed   { background:#f1f5f9;color:#475569;padding:.18rem .6rem;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap }
-  .tkt-row-urgent td   { border-left:3px solid var(--red) !important }
-  .tkt-row-high td:first-child { border-left:3px solid var(--accent) }
-  .tkt-comment-item    { padding:.45rem .6rem;border-bottom:1px solid var(--border);font-size:.8rem;line-height:1.5 }
-  .tkt-comment-item:last-child { border-bottom:none }
-  .tkt-comment-meta    { font-size:.72rem;color:var(--muted);margin-top:.15rem }
+/* ═══════════════════════════════════════
+   MOBILE RESPONSIVE — Complete Fix
+   ═══════════════════════════════════════ */
+
+@media(max-width:900px){
+  .stats-grid{grid-template-columns:repeat(3,1fr)}
+  .summary-grid{grid-template-columns:1fr}
+  #or-kpi.stats-grid{grid-template-columns:repeat(3,1fr)}
+  .charts-grid-2{grid-template-columns:1fr}
+  .daily-columns{grid-template-columns:1fr}
+  .daily-summary-row{grid-template-columns:1fr 1fr}
+}
+
+@media(max-width:768px){
+  /* ── Sidebar ── */
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.open{display:block}
+  .hamburger{display:block}
+
+  /* ── Main content ── */
+  .main{margin-left:0 !important;padding:.8rem !important}
+  .topbar{margin-bottom:.8rem}
+  .page-title{font-size:1rem !important}
+
+  /* ── Stats grid ── */
+  .stats-grid{grid-template-columns:1fr 1fr !important}
+  #or-kpi.stats-grid{grid-template-columns:1fr 1fr !important}
+  .stat-value{font-size:1.4rem !important}
+  .stat-card{padding:.8rem 1rem}
+
+  /* ── Form — single column ── */
+  .form-grid{grid-template-columns:1fr !important;gap:.7rem !important}
+  .form-grid .full{grid-column:1 !important}
+  .form-group input,
+  .form-group select,
+  .form-group textarea{font-size:16px !important}
+  .form-actions{flex-direction:column;gap:.5rem}
+  .btn-save,.btn-secondary{width:100% !important;text-align:center}
+
+  /* ── Filter bar ── */
+  .filter-bar{flex-direction:column !important;gap:.5rem !important;padding:.8rem !important}
+  .filter-group{width:100% !important;min-width:unset !important}
+  .filter-group select,
+  .filter-group input{width:100% !important}
+  .btn-filter{width:100% !important}
+
+  /* ── Cards ── */
+  .card{padding:1rem !important;margin-bottom:.8rem}
+  .card-title{font-size:.88rem}
+
+  /* ── Tables ── */
+  .table-wrap{overflow-x:auto !important;-webkit-overflow-scrolling:touch}
+  table{font-size:.75rem !important}
+  thead th{padding:.5rem .55rem !important;font-size:.68rem !important}
+  tbody td{padding:.45rem .55rem !important}
+
+  /* ── Calendar ── */
+  .cal-cell{min-height:45px !important;padding:.2rem !important}
+  .cal-task{display:none !important}
+  .cal-day-name{font-size:.65rem}
+
+  /* ── Charts ── */
+  .charts-grid-2{grid-template-columns:1fr !important}
+  .chart-card{padding:1rem}
+
+  /* ── Daily report ── */
+  .daily-columns{grid-template-columns:1fr !important}
+  .daily-summary-row{grid-template-columns:1fr 1fr !important}
+  .daily-stat-val{font-size:1.5rem}
+
+  /* ── Summary grid ── */
+  .summary-grid{grid-template-columns:1fr !important}
+
+  /* ── Master tabs ── */
+  .master-tabs{flex-wrap:wrap}
+  .master-tab{font-size:.78rem;padding:.4rem .7rem}
+  .master-add{flex-direction:column}
+  .master-add input,
+  .master-add select{width:100%}
+  .btn-add{width:100%}
+
+  /* ── Auth box ── */
+  .auth-box{padding:1.5rem 1.2rem}
+
+  /* ── Leave form ── */
+  #leave-panel-apply > div{grid-template-columns:1fr !important}
+
+  /* ── Due date modal ── */
+  .dd-modal-box{padding:1.2rem}
+
+  /* ── Topbar chip ── */
+  .chip{font-size:.68rem;padding:.25rem .6rem}
+
+  /* ── VR filter bar ── */
+  .vr-filter-bar{flex-direction:column !important;gap:.5rem !important}
+}
+
+@media(max-width:480px){
+  /* ── Everything single column ── */
+  .stats-grid{grid-template-columns:1fr 1fr !important}
+  #or-kpi.stats-grid{grid-template-columns:1fr 1fr !important}
+  .main{padding:.5rem !important}
+  .card{padding:.75rem !important}
+
+  /* ── Smaller text ── */
+  .stat-value{font-size:1.25rem !important}
+  .stat-label{font-size:.65rem}
+  .page-title{font-size:.9rem !important}
+
+  /* ── Form inputs — prevent iOS zoom ── */
+  .form-group input,
+  .form-group select,
+  .form-group textarea,
+  .master-add input,
+  .master-add select,
+  .filter-group select,
+  .filter-group input{font-size:16px !important}
+
+  /* ── Topbar ── */
+  .topbar{flex-wrap:wrap;gap:.4rem}
+
+  /* ── Daily ── */
+  .daily-summary-row{grid-template-columns:1fr 1fr !important}
+  .daily-stat-val{font-size:1.3rem}
+  .daily-person-row{padding:.4rem .8rem}
+
+  /* ── Tables ── */
+  table{font-size:.72rem !important}
+  thead th{font-size:.63rem !important;padding:.4rem .45rem !important}
+  tbody td{padding:.4rem .45rem !important}
+
+  /* ── Buttons ── */
+  .btn-export{font-size:.72rem;padding:.35rem .7rem}
+  .btn-filter{padding:.45rem .9rem}
+
+  /* ── Sidebar ── */
+  .sidebar-user-name{font-size:.78rem}
+  .nav-item{font-size:.82rem;padding:.55rem 1rem}
+
+  /* ── Auth ── */
+  .auth-box{padding:1.2rem 1rem}
+  .auth-tabs{gap:.3rem}
+
+  /* ── Leave form ── */
+  .leave-tab{font-size:.78rem;padding:.4rem .8rem}
+
+  /* ── Chips ── */
+  .chip{font-size:.65rem}
+}
 
 
   /* ENTRY EDIT MODAL */
