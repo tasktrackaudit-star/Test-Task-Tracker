@@ -11,26 +11,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-/* Mobile optimisation */
-* { -webkit-tap-highlight-color: transparent; }
-
-body {
-  -webkit-text-size-adjust: 100%;
-  overflow-x: hidden;
-}
-
-/* Sidebar hidden on mobile by default */
-@media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); }
-  .main { margin-left: 0 !important; padding: .8rem !important; }
-  .stats-grid { grid-template-columns: 1fr 1fr !important; }
-  .form-grid { grid-template-columns: 1fr !important; }
-  .page-title { font-size: 1.1rem !important; }
-  .stat-value { font-size: 1.5rem !important; }
-  table { font-size: .75rem !important; }
-  thead th { padding: .5rem .6rem !important; }
-  tbody td { padding: .45rem .6rem !important; }
-}
 <style>
   :root {
     --navy:#0f2044;--navy2:#1a3260;--blue:#2557a7;--accent:#f0a500;--accent2:#ffc845;
@@ -5847,6 +5827,26 @@ function exportCalDayPDF() {
 <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; font-src * data:;">
   <title>Daily Report — ${title}</title>
   <style>
+  /* Mobile optimisation */
+* { -webkit-tap-highlight-color: transparent; }
+
+body {
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+/* Sidebar hidden on mobile by default */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .main { margin-left: 0 !important; padding: .8rem !important; }
+  .stats-grid { grid-template-columns: 1fr 1fr !important; }
+  .form-grid { grid-template-columns: 1fr !important; }
+  .page-title { font-size: 1.1rem !important; }
+  .stat-value { font-size: 1.5rem !important; }
+  table { font-size: .75rem !important; }
+  thead th { padding: .5rem .6rem !important; }
+  tbody td { padding: .45rem .6rem !important; }
+}
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a2e; background: #fff; padding: 32px; }
     .pdf-header { border-bottom: 3px solid #0f2044; padding-bottom: 14px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; }
